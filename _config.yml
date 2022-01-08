@@ -8,7 +8,7 @@ subtitle: '让优秀成为一种习惯'
 description: ''
 keywords:
 author: Lin Wang
-language: zh-Hans
+language: zh-CN
 timezone: ''
 
 # URL
@@ -107,3 +107,15 @@ deploy:
   repository: git@github.com:linwang-zf/linwang-zf.github.io.git
   branch: master
   
+# Search
+search:
+path: search.xml
+field: post
+format: html
+limit: 10000
+
+symbols_count_time:
+  symbols: true                # 文章字数统计
+  time: true                   # 文章阅读时长
+  total_symbols: false          # 站点总字数统计
+  total_time: false 

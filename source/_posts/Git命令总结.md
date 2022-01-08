@@ -1,10 +1,10 @@
 ---
 title: Git命令总结
 author: linWang
-description: 本文总结了平时常用的Git命令，后续会继续补充。
 categories: blog
 date: 2022-01-06 21:29:04
 tags:
+top: true
 ---
 ## 一、Git远程仓库命令
 ### 1.1 筛选远程仓库地址
@@ -12,6 +12,7 @@ tags:
 # 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)
 git remote -v|head -1|awk '{print $2}'
 ```
+<!--more-->
 ### 1.2 关联远程分支
 在关联远程分支的同时，在本地创建一个同名分支
 ```shell
