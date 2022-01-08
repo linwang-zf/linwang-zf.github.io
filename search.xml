@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<search>
+  <entry>
+    <title>Git命令总结</title>
+    <url>/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[<h2 id="一、Git远程仓库命令"><a href="#一、Git远程仓库命令" class="headerlink" title="一、Git远程仓库命令"></a>一、Git远程仓库命令</h2><h3 id="1-1-筛选远程仓库地址"><a href="#1-1-筛选远程仓库地址" class="headerlink" title="1.1 筛选远程仓库地址"></a>1.1 筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
+<h3 id="1-2-关联远程分支"><a href="#1-2-关联远程分支" class="headerlink" title="1.2 关联远程分支"></a>1.2 关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
+<h2 id="1-3-同步远程分支"><a href="#1-3-同步远程分支" class="headerlink" title="1.3 同步远程分支"></a>1.3 同步远程分支</h2><p>同步远程分支，并且可以删除远程不存在的本地分支</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 同步远程分支</span></span><br><span class="line">1. git remote prune origin</span><br></pre></td></tr></table></figure>
+<h2 id="二、分支命令"><a href="#二、分支命令" class="headerlink" title="二、分支命令"></a>二、分支命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某个提交(其他分支)检入当前分支</span></span><br><span class="line">git cherry-pick hashCommit</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将某个分支连续的提交检入当前分支(包含开始的提交的分支e1223b03)</span></span><br><span class="line">git cherry-pick e1223b03^..47eee952</span><br><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突之后，解决冲突</span></span><br><span class="line">git add .</span><br><span class="line">git cherry-pick --continue</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看分支名，并匹配以*开头的分支(当前分支)，并打印最后一个字符串的值(以空格分割)</span></span><br><span class="line">git branch|egrep &#x27;^\*&#x27;|awk &#x27;&#123;print $NF&#125;&#x27;</span><br></pre></td></tr></table></figure>
+<h2 id="二、checkout相关命令"><a href="#二、checkout相关命令" class="headerlink" title="二、checkout相关命令"></a>二、checkout相关命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将dev分支的某个文件检入master分支</span></span><br><span class="line">1. git checkout master</span><br><span class="line">2. git checkout --patch dev filePath</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <categories>
+        <category>blog</category>
+      </categories>
+  </entry>
+  <entry>
+    <title>Hello World</title>
+    <url>/2022/01/07/hello-world/</url>
+    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
+<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
+<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
+<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
+<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
+
+<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
+]]></content>
+      <categories>
+        <category>test</category>
+      </categories>
+  </entry>
+</search>
