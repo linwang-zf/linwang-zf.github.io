@@ -239,6 +239,7 @@
       {%- endif %}
 
       <footer class="post-footer">
+        {#
         {%- if post.tags and post.tags.length %}
           {%- if theme.tag_icon %}
             {%- set tag_indicate = '<i class="fa fa-tag"></i>' %}
@@ -251,7 +252,7 @@
             {%- endfor %}
           </div>
         {%- endif %}
-
+	#}
         {{ partial('_partials/post/post-footer.swig', {}, {cache: theme.cache.enable}) }}
 
         {{ post_nav(post) }}
