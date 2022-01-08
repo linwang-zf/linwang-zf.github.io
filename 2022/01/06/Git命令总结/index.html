@@ -94,15 +94,15 @@
 
 
 
-<meta name="description" content="本文总结了平时常用的Git命令，后续会继续补充。">
+<meta name="description" content="一、Git远程仓库命令1.1 筛选远程仓库地址12# 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)git remote -v|head -1|awk &amp;#x27;&amp;#123;print $2&amp;#125;&amp;#x27;">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Git命令总结">
 <meta property="og:url" content="http://linwang-zf.github.io/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/index.html">
 <meta property="og:site_name" content="逐风的博客">
-<meta property="og:description" content="本文总结了平时常用的Git命令，后续会继续补充。">
+<meta property="og:description" content="一、Git远程仓库命令1.1 筛选远程仓库地址12# 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)git remote -v|head -1|awk &amp;#x27;&amp;#123;print $2&amp;#125;&amp;#x27;">
 <meta property="og:locale">
 <meta property="article:published_time" content="2022-01-06T13:29:04.000Z">
-<meta property="article:modified_time" content="2022-01-08T10:14:39.720Z">
+<meta property="article:modified_time" content="2022-01-08T12:50:27.390Z">
 <meta property="article:author" content="Lin Wang">
 <meta name="twitter:card" content="summary">
 
@@ -377,7 +377,6 @@
             <div class="post-wordcount">
               
                 
-		<br>
                 <span class="post-meta-item-icon">
                   <i class="fa fa-file-word-o"></i>
                 </span>
@@ -408,11 +407,7 @@
           
 
          { # 
-	 
-              <div class="post-description">
-                  本文总结了平时常用的Git命令，后续会继续补充。
-              </div>
-           
+	  
 	 # } 
 
         </div>
@@ -429,6 +424,7 @@
 
       
         <h2 id="一、Git远程仓库命令"><a href="#一、Git远程仓库命令" class="headerlink" title="一、Git远程仓库命令"></a>一、Git远程仓库命令</h2><h3 id="1-1-筛选远程仓库地址"><a href="#1-1-筛选远程仓库地址" class="headerlink" title="1.1 筛选远程仓库地址"></a>1.1 筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
+<span id="more"></span>
 <h3 id="1-2-关联远程分支"><a href="#1-2-关联远程分支" class="headerlink" title="1.2 关联远程分支"></a>1.2 关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
 <h2 id="1-3-同步远程分支"><a href="#1-3-同步远程分支" class="headerlink" title="1.3 同步远程分支"></a>1.3 同步远程分支</h2><p>同步远程分支，并且可以删除远程不存在的本地分支</p>
