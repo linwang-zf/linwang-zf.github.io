@@ -21,6 +21,7 @@
     <title>Python爬取“谁是高手·双升”视频链接</title>
     <url>/2022/01/08/Python%E7%88%AC%E5%8F%96%E3%80%8A%E8%B0%81%E6%98%AF%E9%AB%98%E6%89%8B%C2%B7%E5%8F%8C%E5%8D%87%E3%80%8B%E8%A7%86%E9%A2%91%E9%93%BE%E6%8E%A5/</url>
     <content><![CDATA[<h2 id="Python爬取《谁是高手·双升》视频链接"><a href="#Python爬取《谁是高手·双升》视频链接" class="headerlink" title="Python爬取《谁是高手·双升》视频链接"></a>Python爬取《谁是高手·双升》视频链接</h2><h3 id="序言"><a href="#序言" class="headerlink" title="序言"></a>序言</h3><p>​    高中三年陪伴我最久的电视节目就是《谁是高手 · 双升》，天天中午吃饭必看。后来上了大学之后，开始在<a href="http://www.sxrtv.com/content/c/d/">山西网络广播电视台</a>观看，但是该网站更新到2121年1月1日的视频之后就不更新了。后来发现只能通过《黄河plus》APP观看直播或者重播了。但是这个APP的观看体验不是很好，无法像其他的视频APP一样方便的快进或者快退。于是写了如下的代码，用来爬取《黄河plus》中《谁是高手 · 双升》的视频。</p>
+<span id="more"></span>
 <img src="/谁是高手.png" style="zoom: 80%;" />
 
 <h3 id="1-抓取APP数据包"><a href="#1-抓取APP数据包" class="headerlink" title="1. 抓取APP数据包"></a>1. 抓取APP数据包</h3><h4 id="（1）获取视频链接"><a href="#（1）获取视频链接" class="headerlink" title="（1）获取视频链接"></a>（1）获取视频链接</h4><p>​    用Fiddler抓取手机APP《黄河plus》的数据包(Fiddler抓取手机数据包的教程可以自行百度)。如下图所示：</p>
