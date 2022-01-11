@@ -189,10 +189,6 @@ git stash drop [stash_id]
 git stash clear
 ```
 
-
-
-## Git与远程仓库相关的命令
-
 ## Git远程仓库命令
 
 ### 筛选远程仓库地址
@@ -201,8 +197,6 @@ git stash clear
 # 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)
 git remote -v|head -1|awk '{print $2}'
 ```
-<!--more-->
-
 ### 关联远程分支
 
 在关联远程分支的同时，在本地创建一个同名分支
