@@ -1,11 +1,15 @@
 ---
 title: Git命令总结
 author: linWang
-categories: blog
+categories:
 date: 2022-01-06 21:29:04
-tags:
+tags: git命令
 top: true
 ---
+>   本文总结了平时生活中经常用到的Git命令，详细的描述了命令的用法，后续还会继续补充，方便以后查看。
+
+<!--more-->
+
 ## Git的配置命令
 
 ### 初始化仓库
@@ -32,7 +36,7 @@ git config --global user.name
 
 ## Git常用命令
 
-### 提交命令
+### add 和 commit
 
 ```shell
 # 1.将工作区的修改提交到暂存区
@@ -44,7 +48,7 @@ git commit -m "note"
 git commit -am "note"
 ```
 
-### 查看当前状态
+### status
 
 ```shell
 # 该命令会比较 <工作区和暂存区的内容> 和 <暂存区和版本库的内容>
@@ -54,7 +58,7 @@ git commit -am "note"
 git status
 ```
 
-### 检入提交到当前分支
+### cherry-pick
 
 `git cherry-pick`可以将**某次提交或者某几个提交(其他分支)**检入当前分支，详细的操作如下：
 
@@ -65,7 +69,7 @@ git cherry-pick <commitHash>
 
 举例来说，代码仓库目前有两个分支master和feature，提交历史如下图
 
-![image-20220110230544989](image-20220110230544989.png)
+![cherry-pick演示](image-20220110230544989.png)
 
 现在将feature分支的提交f应用到master分支上，命令如下：
 
@@ -131,6 +135,58 @@ git fetch origin
 git log origin/master
 # 将上述获取的commitHash检入当前分支
 git cherry-pick <commitHash>
+```
+
+### stash
+
+某一天你在dev分支上开发新需求时，突然被要求改一个线上的紧急Bug，此时你新的功能还未开发完成，不想进行提交。这个时候你就可以采用stash命令，将工作区和暂存区的内容放入栈中，然后切换到其他分支修复bug，当修复完成后，再从栈顶中取出刚刚的内容继续后续的开发。详细的命令如下：
+
+```shell
+# 保存当前工作区和暂存区的修改内容,括号中的命令可以增加注释信息
+git stash (git stash save "message")
+
+# 显示栈中保存信息的列表
+git stash list
+```
+
+当需要从栈中取出之前保存的信息时，可以采用下面的命令：
+
+```shell
+# 从栈顶取出一次改动内容，并从栈中删除(恢复最新的进度到工作区)
+git stash pop
+
+# 恢复最新的进度到工作区和暂存区(尝试将原来暂存区的改动还恢复到暂存区)
+git stash pop --index
+
+# 将指定的进度恢复到工作区
+git stash pop stash@{1}
+```
+
+下面简要分析加--index和不加的区别。
+
+![git statsh之前的文件状态](image-20220111223151327.png)
+
+从上图中可以看出，testStash文件此时处于暂存区的改动（即已经进行了add操作，还未进行commit操作），这时采用`git stash`将修改内容保存到栈中，当我们用`git stash pop`命令取出内容时，效果如下：
+
+![git stash pop操作结果](image-20220111223513807.png)
+
+从上图中可以看到，如果不加--index，Git会将所有的改动全部放入工作区(即还未add的状态)，如果加了--index则和之前的状态保持一致。
+
+如果恢复保存进度的时候不想要删除栈中的进度，则可以使用下面的命令：
+
+```shell
+# apply命令和pop命令的用法完全一致，区别仅在于pop会删除进度，而apply不会
+git stash apply 
+```
+
+**删除栈中进度命令**
+
+```shell
+# 删除stash_id对应的进度，如果没有指定，则删除最新的进度
+git stash drop [stash_id]
+
+# 清除栈中所有存储的进度
+git stash clear
 ```
 
 
