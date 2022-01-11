@@ -3,19 +3,24 @@
   <entry>
     <title>Git命令总结</title>
     <url>/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/</url>
-    <content><![CDATA[<h2 id="Git的配置命令"><a href="#Git的配置命令" class="headerlink" title="Git的配置命令"></a>Git的配置命令</h2><h3 id="初始化仓库"><a href="#初始化仓库" class="headerlink" title="初始化仓库"></a>初始化仓库</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入某个目录</span></span><br><span class="line">cd d:/gitDemo</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2. 初始化(执行之后，在当前目录下会有一个.git文件夹)</span></span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
+    <content><![CDATA[<blockquote>
+<p>  本文总结了平时生活中经常用到的Git命令，详细的描述了命令的用法，后续还会继续补充，方便以后查看。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="Git的配置命令"><a href="#Git的配置命令" class="headerlink" title="Git的配置命令"></a>Git的配置命令</h2><h3 id="初始化仓库"><a href="#初始化仓库" class="headerlink" title="初始化仓库"></a>初始化仓库</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入某个目录</span></span><br><span class="line">cd d:/gitDemo</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2. 初始化(执行之后，在当前目录下会有一个.git文件夹)</span></span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
 
 <h3 id="配置Git的邮箱和用户名"><a href="#配置Git的邮箱和用户名" class="headerlink" title="配置Git的邮箱和用户名"></a>配置Git的邮箱和用户名</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局邮箱地址</span></span><br><span class="line">git config --global user.email &quot;903862530@qq.com&quot;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局用户名</span></span><br><span class="line">git config --global user.name &quot;linwang-zf&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看全局配置的用户名和邮箱地址</span></span><br><span class="line">git config --global user.email</span><br><span class="line">git config --global user.name</span><br></pre></td></tr></table></figure>
 
-<h2 id="Git常用命令"><a href="#Git常用命令" class="headerlink" title="Git常用命令"></a>Git常用命令</h2><h3 id="提交命令"><a href="#提交命令" class="headerlink" title="提交命令"></a>提交命令</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.将工作区的修改提交到暂存区</span></span><br><span class="line">git add .</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将暂存区的内容提交到版本库</span></span><br><span class="line">git commit -m &quot;note&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果修改的文件已经被Git管理，则上述命令可以简化为</span></span><br><span class="line">git commit -am &quot;note&quot;</span><br></pre></td></tr></table></figure>
+<h2 id="Git常用命令"><a href="#Git常用命令" class="headerlink" title="Git常用命令"></a>Git常用命令</h2><h3 id="add-和-commit"><a href="#add-和-commit" class="headerlink" title="add 和 commit"></a>add 和 commit</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.将工作区的修改提交到暂存区</span></span><br><span class="line">git add .</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将暂存区的内容提交到版本库</span></span><br><span class="line">git commit -m &quot;note&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果修改的文件已经被Git管理，则上述命令可以简化为</span></span><br><span class="line">git commit -am &quot;note&quot;</span><br></pre></td></tr></table></figure>
 
-<h3 id="查看当前状态"><a href="#查看当前状态" class="headerlink" title="查看当前状态"></a>查看当前状态</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 该命令会比较 &lt;工作区和暂存区的内容&gt; 和 &lt;暂存区和版本库的内容&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 比较结果用颜色区分：</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（1）工作区和暂存区的内容不一致时，此时文件的颜色为红色</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（2）暂存区和版本库的内容不一致时，此时文件的颜色为绿色</span></span><br><span class="line">git status</span><br></pre></td></tr></table></figure>
+<h3 id="status"><a href="#status" class="headerlink" title="status"></a>status</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 该命令会比较 &lt;工作区和暂存区的内容&gt; 和 &lt;暂存区和版本库的内容&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 比较结果用颜色区分：</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（1）工作区和暂存区的内容不一致时，此时文件的颜色为红色</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（2）暂存区和版本库的内容不一致时，此时文件的颜色为绿色</span></span><br><span class="line">git status</span><br></pre></td></tr></table></figure>
 
-<h3 id="检入提交到当前分支"><a href="#检入提交到当前分支" class="headerlink" title="检入提交到当前分支"></a>检入提交到当前分支</h3><p><code>git cherry-pick</code>可以将**某次提交或者某几个提交(其他分支)**检入当前分支，详细的操作如下：</p>
+<h3 id="cherry-pick"><a href="#cherry-pick" class="headerlink" title="cherry-pick"></a>cherry-pick</h3><p><code>git cherry-pick</code>可以将**某次提交或者某几个提交(其他分支)**检入当前分支，详细的操作如下：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某次提交的commitHash值检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
 
 <p>举例来说，代码仓库目前有两个分支master和feature，提交历史如下图</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220110230544989.png" alt="image-20220110230544989"></p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220110230544989.png" alt="cherry-pick演示"></p>
 <p>现在将feature分支的提交f应用到master分支上，命令如下：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.切换到master分支</span></span><br><span class="line">git checkout master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.Cherry Pick操作</span></span><br><span class="line">git cherry-pick f</span><br></pre></td></tr></table></figure>
 
@@ -31,10 +36,27 @@
 <p><code>cherry-pick</code>还支持将远程仓库的某次提交检入当前分支，具体命令如下：</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 增加远程仓库的地址</span></span><br><span class="line">git remote add origin git://gitAddress</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将远程仓库抓取到本地</span></span><br><span class="line">git fetch origin</span><br><span class="line"><span class="meta">#</span><span class="bash"> 查找将要检入的commitHash</span></span><br><span class="line">git log origin/master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将上述获取的commitHash检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
 
+<h3 id="stash"><a href="#stash" class="headerlink" title="stash"></a>stash</h3><p>某一天你在dev分支上开发新需求时，突然被要求改一个线上的紧急Bug，此时你新的功能还未开发完成，不想进行提交。这个时候你就可以采用stash命令，将工作区和暂存区的内容放入栈中，然后切换到其他分支修复bug，当修复完成后，再从栈顶中取出刚刚的内容继续后续的开发。详细的命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 保存当前工作区和暂存区的修改内容,括号中的命令可以增加注释信息</span></span><br><span class="line">git stash (git stash save &quot;message&quot;)</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 显示栈中保存信息的列表</span></span><br><span class="line">git stash list</span><br></pre></td></tr></table></figure>
+
+<p>当需要从栈中取出之前保存的信息时，可以采用下面的命令：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 从栈顶取出一次改动内容，并从栈中删除(恢复最新的进度到工作区)</span></span><br><span class="line">git stash pop</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 恢复最新的进度到工作区和暂存区(尝试将原来暂存区的改动还恢复到暂存区)</span></span><br><span class="line">git stash pop --index</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将指定的进度恢复到工作区</span></span><br><span class="line">git stash pop stash@&#123;1&#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面简要分析加–index和不加的区别。</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223151327.png" alt="git statsh之前的文件状态"></p>
+<p>从上图中可以看出，testStash文件此时处于暂存区的改动（即已经进行了add操作，还未进行commit操作），这时采用<code>git stash</code>将修改内容保存到栈中，当我们用<code>git stash pop</code>命令取出内容时，效果如下：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223513807.png" alt="git stash pop操作结果"></p>
+<p>从上图中可以看到，如果不加–index，Git会将所有的改动全部放入工作区(即还未add的状态)，如果加了–index则和之前的状态保持一致。</p>
+<p>如果恢复保存进度的时候不想要删除栈中的进度，则可以使用下面的命令：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> apply命令和pop命令的用法完全一致，区别仅在于pop会删除进度，而apply不会</span></span><br><span class="line">git stash apply </span><br></pre></td></tr></table></figure>
+
+<p><strong>删除栈中进度命令</strong></p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 删除stash_id对应的进度，如果没有指定，则删除最新的进度</span></span><br><span class="line">git stash drop [stash_id]</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清除栈中所有存储的进度</span></span><br><span class="line">git stash clear</span><br></pre></td></tr></table></figure>
+
 
 
 <h2 id="Git与远程仓库相关的命令"><a href="#Git与远程仓库相关的命令" class="headerlink" title="Git与远程仓库相关的命令"></a>Git与远程仓库相关的命令</h2><h2 id="Git远程仓库命令"><a href="#Git远程仓库命令" class="headerlink" title="Git远程仓库命令"></a>Git远程仓库命令</h2><h3 id="筛选远程仓库地址"><a href="#筛选远程仓库地址" class="headerlink" title="筛选远程仓库地址"></a>筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
-<span id="more"></span>
+<!--more-->
 
 <h3 id="关联远程分支"><a href="#关联远程分支" class="headerlink" title="关联远程分支"></a>关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
@@ -47,9 +69,9 @@
 <h2 id="checkout相关命令"><a href="#checkout相关命令" class="headerlink" title="checkout相关命令"></a>checkout相关命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将dev分支的某个文件检入master分支</span></span><br><span class="line">1. git checkout master</span><br><span class="line">2. git checkout --patch dev filePath</span><br></pre></td></tr></table></figure>
 
 ]]></content>
-      <categories>
-        <category>blog</category>
-      </categories>
+      <tags>
+        <tag>git命令</tag>
+      </tags>
   </entry>
   <entry>
     <title>Python爬取“谁是高手·双升”视频链接</title>
