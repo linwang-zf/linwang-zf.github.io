@@ -53,6 +53,16 @@
 <p><strong>删除栈中进度命令</strong></p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 删除stash_id对应的进度，如果没有指定，则删除最新的进度</span></span><br><span class="line">git stash drop [stash_id]</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清除栈中所有存储的进度</span></span><br><span class="line">git stash clear</span><br></pre></td></tr></table></figure>
 
+<h3 id="rebase"><a href="#rebase" class="headerlink" title="rebase"></a>rebase</h3><h4 id="rebase常用命令"><a href="#rebase常用命令" class="headerlink" title="rebase常用命令"></a>rebase常用命令</h4><h4 id="rebase和merge的区别"><a href="#rebase和merge的区别" class="headerlink" title="rebase和merge的区别"></a>rebase和merge的区别</h4><p>当我们在自己的分支上开发完成后，通常需要合并其他分支，我们一般会使用merge命令来合并，但是其实也可以采用rebase命令。</p>
+<p>假设git当前的Commit提交记录如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231142561.png" alt="git原始commit图"></p>
+<p>此时分别在master分支和mywork分支上进行两次提交，提交之后状态如下图：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231336735.png" alt="提交两次之后的commit图"></p>
+<p>此时在master上合并mywork分支，如果使用merge命令，则合并之后的图如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231555007.png" alt="merge合并示意图"></p>
+<p>如果采用rebase合并，则合并之后如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231647697.png" alt="rebase合并示意图"></p>
+<p>从上述分析可以知道，rebase在合并的时候采用的方法时变基，这样的好处是让提交更整齐，但是可能会带来很多冲突；merge合并则直接将两个分支进行合并为一个分支，简单粗暴。</p>
 <h2 id="Git远程仓库命令"><a href="#Git远程仓库命令" class="headerlink" title="Git远程仓库命令"></a>Git远程仓库命令</h2><h3 id="筛选远程仓库地址"><a href="#筛选远程仓库地址" class="headerlink" title="筛选远程仓库地址"></a>筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
 <h3 id="关联远程分支"><a href="#关联远程分支" class="headerlink" title="关联远程分支"></a>关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
 <figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
