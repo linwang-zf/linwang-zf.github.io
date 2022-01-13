@@ -189,6 +189,34 @@ git stash drop [stash_id]
 git stash clear
 ```
 
+### rebase
+
+#### rebase常用命令
+
+
+
+#### rebase和merge的区别
+
+当我们在自己的分支上开发完成后，通常需要合并其他分支，我们一般会使用merge命令来合并，但是其实也可以采用rebase命令。
+
+假设git当前的Commit提交记录如下所示：
+
+![git原始commit图](image-20220113231142561.png)
+
+此时分别在master分支和mywork分支上进行两次提交，提交之后状态如下图：
+
+![提交两次之后的commit图](image-20220113231336735.png)
+
+此时在master上合并mywork分支，如果使用merge命令，则合并之后的图如下所示：
+
+![merge合并示意图](image-20220113231555007.png)
+
+如果采用rebase合并，则合并之后如下所示：
+
+![rebase合并示意图](image-20220113231647697.png)
+
+从上述分析可以知道，rebase在合并的时候采用的方法时变基，这样的好处是让提交更整齐，但是可能会带来很多冲突；merge合并则直接将两个分支进行合并为一个分支，简单粗暴。
+
 ## Git远程仓库命令
 
 ### 筛选远程仓库地址
