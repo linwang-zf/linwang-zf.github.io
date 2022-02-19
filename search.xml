@@ -68,9 +68,24 @@
 <span id="more"></span>
 
 <p>在<a href="https://blog.linwang.tech/2022/01/23/RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86">SpringMVC系列(一)—RequestMapping注解的原理</a>这篇文章中，我们学习了@RequestMapping注解的原理，以及http请求的流程，但是springMVC到底是如何根据request的url请求来匹配到具体的url规则呢，本章我们就来详细的学习一下。<br>我们知道RequestMapping不仅仅支持精准匹配，还可以进行模糊匹配，即使用* ？ **等通配符，下面我们就分别来看下这两种方式是如何实现的。</p>
-<h2 id="精准匹配"><a href="#精准匹配" class="headerlink" title="精准匹配"></a>精准匹配</h2><p>当我们自定义方法上的@RequestMappingMapping注解中不包含通配符时即为精准匹配，例如下面的匹配规则。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/%E7%A4%BA%E4%BE%8B%E5%9B%BE.png"></p>
-<p>我们一起来看下上述例子中的匹配源码，如下图。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/1.png"><br>lookupHandlerMethod函数的作用就是根据给定的lookupPath，查找一个最佳匹配的handleMethod，下面我们继续深入看这个函数。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/2.png"><br>上图中红框中的函数getMappingsByDirectPath的作用是获取key为指定url的RequestMappingInfo。当返回结果directPathMatches不为空时，继续调用addMatchingMappings函数，我们继续看该函数的源码。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/11.png"><br>addMatchingMappings函数的作用是对比mapping和request，如果匹配结果不为null，则加入matcher列表中。在上述示例的精准匹配中，这里的mappings为<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/3.png"><br>此时获取到最佳的RequestMappingInfo匹配，并在mappingRegistry中查找对应的MappingRegistration。并返回其中的handleMethod。</p>
-<h2 id="模糊匹配"><a href="#模糊匹配" class="headerlink" title="模糊匹配"></a>模糊匹配</h2><h3 id="URL中的通配符为："><a href="#URL中的通配符为：" class="headerlink" title="URL中的通配符为：* ? **"></a>URL中的通配符为：* ? **</h3><p>有时候我们在开发时，url中往往并不是某个具体的字符串，而是一个模糊的通配符，用来匹配特性相同的一类url。举个例子如下：<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/4.png"><br>假设我们当前http访问的路径为：“<a href="http://localhost:7001/RequestMappingDemoController/vagueMatch%E2%80%9D">http://localhost:7001/RequestMappingDemoController/vagueMatch”</a><br>对于上述的例子，getMappingsByDirectPath函数将无法获取到/RequestMappingDemoController/vagueMatch对应的value值，此时将进入下面的代码中。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/5.png"><br>可以看到依旧是调用了addMatchingMappings函数，和精准匹配的区别仅仅在于第一个参数不同，精准匹配中第一个参数为查找到的value，而模糊匹配中传入的是整个mappingRegistry中保存的所有key值，需要遍历去查找最佳的匹配。<br>匹配的源码如下：<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/6.png"><br>pathMatcher是一个Spring提供的工具类，用来校验两个字符串是否匹配，支持*，? ,**, {param}等通配符，RequestMapping注解中的通配符匹配规则本质就是通过pathMatcher来实现的。<br>常见的匹配场景如下：</p>
+<h2 id="精准匹配"><a href="#精准匹配" class="headerlink" title="精准匹配"></a>精准匹配</h2><p>当我们自定义方法上的@RequestMappingMapping注解中不包含通配符时即为精准匹配，例如下面的匹配规则。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/%E7%A4%BA%E4%BE%8B%E5%9B%BE.png"></p>
+<p>我们一起来看下上述例子中的匹配源码，如下图。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/1.png"></p>
+<p>lookupHandlerMethod函数的作用就是根据给定的lookupPath，查找一个最佳匹配的handleMethod，下面我们继续深入看这个函数。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/2.png"></p>
+<p>上图中红框中的函数getMappingsByDirectPath的作用是获取key为指定url的RequestMappingInfo。当返回结果directPathMatches不为空时，继续调用addMatchingMappings函数，我们继续看该函数的源码。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/11.png"></p>
+<p>addMatchingMappings函数的作用是对比mapping和request，如果匹配结果不为null，则加入matcher列表中。在上述示例的精准匹配中，这里的mappings为</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/3.png"></p>
+<p>此时获取到最佳的RequestMappingInfo匹配，并在mappingRegistry中查找对应的MappingRegistration。并返回其中的handleMethod。</p>
+<h2 id="模糊匹配"><a href="#模糊匹配" class="headerlink" title="模糊匹配"></a>模糊匹配</h2><h3 id="URL中的通配符为："><a href="#URL中的通配符为：" class="headerlink" title="URL中的通配符为：* ? **"></a>URL中的通配符为：* ? **</h3><p>有时候我们在开发时，url中往往并不是某个具体的字符串，而是一个模糊的通配符，用来匹配特性相同的一类url。举个例子如下：</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/4.png"></p>
+<p>假设我们当前http访问的路径为：“<a href="http://localhost:7001/RequestMappingDemoController/vagueMatch%E2%80%9D">http://localhost:7001/RequestMappingDemoController/vagueMatch”</a><br>对于上述的例子，getMappingsByDirectPath函数将无法获取到/RequestMappingDemoController/vagueMatch对应的value值，此时将进入下面的代码中。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/5.png"></p>
+<p>可以看到依旧是调用了addMatchingMappings函数，和精准匹配的区别仅仅在于第一个参数不同，精准匹配中第一个参数为查找到的value，而模糊匹配中传入的是整个mappingRegistry中保存的所有key值，需要遍历去查找最佳的匹配。<br>匹配的源码如下：</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/6.png"></p>
+<p>pathMatcher是一个Spring提供的工具类，用来校验两个字符串是否匹配，支持*，? ,**, {param}等通配符，RequestMapping注解中的通配符匹配规则本质就是通过pathMatcher来实现的。<br>常见的匹配场景如下：</p>
 <table>
 <thead>
 <tr>
@@ -135,7 +150,14 @@
 <td>false</td>
 </tr>
 </tbody></table>
-<h3 id="URL中的通配符包含：-param"><a href="#URL中的通配符包含：-param" class="headerlink" title="URL中的通配符包含：{param}"></a>URL中的通配符包含：{param}</h3><p>通过{param}的方式，我们可以获取url路径中的参数，那么SpringMVC又是怎么做的呢？<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/7.png"><br>通过addMatchingMappings函数获取到最佳的url匹配规则后，会通过handleMatch对匹配结果Match进行处理，我们继续深入看下HandleMatch源码。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/10.png">    在handleMatch函数中，调用了extractMatchDetails函数，通过函数名我们可以了解该函数是用来提取Match详情的，我们通过源码来看下其真正的作用：<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/8.png"><br>在extractMatchDetails函数中，调用了PathMatcher工具类中的extractUriTemplateVariables函数，这个函数的入参有两个，一个是url匹配规则，一个是request中的url访问路径，extractUriTemplateVariables可以从url匹配规则中提取参数名作为key，从url访问路径中提取参数值作为value，存放在Map中，并将Map暴露在Request的Attribute中，如下图。<br><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/9.png"></p>
+<h3 id="URL中的通配符包含：-param"><a href="#URL中的通配符包含：-param" class="headerlink" title="URL中的通配符包含：{param}"></a>URL中的通配符包含：{param}</h3><p>通过{param}的方式，我们可以获取url路径中的参数，那么SpringMVC又是怎么做的呢？</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/7.png"></p>
+<p>通过addMatchingMappings函数获取到最佳的url匹配规则后，会通过handleMatch对匹配结果Match进行处理，我们继续深入看下HandleMatch源码。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/10.png">    </p>
+<p>在handleMatch函数中，调用了extractMatchDetails函数，通过函数名我们可以了解该函数是用来提取Match详情的，我们通过源码来看下其真正的作用：</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/8.png"></p>
+<p>在extractMatchDetails函数中，调用了PathMatcher工具类中的extractUriTemplateVariables函数，这个函数的入参有两个，一个是url匹配规则，一个是request中的url访问路径，extractUriTemplateVariables可以从url匹配规则中提取参数名作为key，从url访问路径中提取参数值作为value，存放在Map中，并将Map暴露在Request的Attribute中，如下图。</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/9.png"></p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>在上述的篇幅中，我们重点介绍了SpringMVC针对不同类型的url匹配规则是如何获取HandlerMethod的，以及在过程中具体做了哪些操作等。</p>
 <ul>
 <li>精确匹配<ul>
