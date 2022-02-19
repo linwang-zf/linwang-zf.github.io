@@ -82,7 +82,35 @@
   <entry>
     <title>家用路由器桥接</title>
     <url>/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/</url>
-    <content><![CDATA[]]></content>
+    <content><![CDATA[<h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>我们都知道，路由器的信号会随着距离的增加而变弱，尤其是中间还隔着障碍物时。这样势必就会导致家里面有些房间的wifi信号很差。此时我们就可以采用“桥接 ”或“中继”模式，将两个路由器连接起来，进而达到放大家用路由器wifi信号的功能。</p>
+<span id="more"></span>
+
+<h2 id="桥接和中继的区别"><a href="#桥接和中继的区别" class="headerlink" title="桥接和中继的区别"></a>桥接和中继的区别</h2><p>以下是我自己的理解。<br>路由器的桥接是将两个不同的局域网连接起来，第二个路由器叫做二级路由，这个二级路由有自己的网关、网端、并且可以自主分配DHCP服务器。中继模式则是将主路由的wifi信号进行扩大，第二个路由器相当于交换机，需要将网关和主路由的网关设置在同一网段、并且需要关闭DHCP功能，在中继模式下，接入副路由器的终端设备是从主路由获取的IP地址。<br>综上，桥接模式和中继模式的区别可以从两个方面区分：</p>
+<ul>
+<li>看接入副路由器的设备的ip地址和主路由的ip地址是否在同一网段：在同一网段为中继模式，不在同一网段为桥接模式</li>
+<li>看副路由和主路由的连接方式：主路由LAN -&gt; 副路由WAN(有线、无线均可)为桥接、主路由LAN -&gt; 副路由LAN(有线、无线均可)为中继</li>
+</ul>
+<h2 id="无线桥接实例"><a href="#无线桥接实例" class="headerlink" title="无线桥接实例"></a>无线桥接实例</h2><p>主路由器：小米<br>副路由器：Tenda N300 v2(相当老的一个路由器，没有5g芯片，哈哈哈)</p>
+<h2 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h2><p>主路由器可以正常上网，记住主路由器的SSID、密码即可<br>下面开始对副路由器进行设置：</p>
+<ol>
+<li>连接tenda的wifi，第一次不需要输入密码</li>
+<li>登录路由器管理界面：192.168.0.1</li>
+<li>打开无线设置 -&gt; 找到无线基本设置 -&gt; 选择网桥(WDS) -&gt; 开始扫描 -&gt; 勾选主路由器的SSID</li>
+</ol>
+<p><img src="https://intranetproxy.alipay.com/skylark/lark/0/2022/png/317020/1643889124601-f85e57f1-a3da-41b1-89f7-1b04c5feb12e.png#clientId=uca40a8d4-6347-4&crop=0&crop=0&crop=1&crop=1&from=paste&height=1009&id=u34e83663&margin=%5Bobject%20Object%5D&name=image.png&originHeight=2018&originWidth=1578&originalType=binary&ratio=1&rotation=0&showTitle=false&size=383540&status=done&style=none&taskId=uff360f64-724d-4dd1-ae02-b5b30e53ac6&title=&width=789" alt="image.png"></p>
+<pre><code>4. 选择无线加密 -&gt; 禁用WPS，设置副路由器的安全规则、加密算法和密码(与主路由相同)
+</code></pre>
+<ol start="5">
+<li>选择高级设置 -&gt; 选择WAN口介质类型 -&gt; 选择无线WAN -&gt; 输入主路由器的SSID和密码，并开始扫描</li>
+</ol>
+<p><img src="https://intranetproxy.alipay.com/skylark/lark/0/2022/png/317020/1643889509898-a1647e11-aa4c-4dfe-96b9-0b7f5167716f.png#clientId=uca40a8d4-6347-4&crop=0&crop=0&crop=1&crop=1&from=paste&height=657&id=ub3ce1668&margin=%5Bobject%20Object%5D&name=image.png&originHeight=1314&originWidth=1572&originalType=binary&ratio=1&rotation=0&showTitle=false&size=233981&status=done&style=none&taskId=uabf7a479-5008-4e80-b2cb-a62b8a59b2b&title=&width=786" alt="image.png"></p>
+]]></content>
+      <categories>
+        <category>路由器</category>
+      </categories>
+      <tags>
+        <tag>路由器</tag>
+      </tags>
   </entry>
   <entry>
     <title>SpringMVC中参数解析流程</title>
