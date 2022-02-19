@@ -93,8 +93,24 @@
     <title>SpringMVC系列(二)---RequestMapping中url匹配原理</title>
     <url>/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/</url>
     <content><![CDATA[<blockquote>
-<p>  本文详解的介绍了@RequestMapping中常见的url匹配类型：精准匹配、模糊匹配。并且分析了这几种类型下url的匹配规则原理<br>| 属性                       | 说明                             |<br>| ————————– | ——————————– |<br>| MappingRegistry.registry   | 所有的url匹配规则均保存在此Map中 |<br>| MappingRegistry.pathLookup | 仅保存不含通配符的url匹配规则    |</p>
+<p>  本文详解的介绍了@RequestMapping中常见的url匹配类型：精准匹配、模糊匹配。并且分析了这几种类型下url的匹配规则原理</p>
 </blockquote>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>MappingRegistry.registry</td>
+<td>所有的url匹配规则均保存在此Map中</td>
+</tr>
+<tr>
+<td>MappingRegistry.pathLookup</td>
+<td>仅保存不含通配符的url匹配规则</td>
+</tr>
+</tbody></table>
 <span id="more"></span>
 
 <p>在<a href="https://blog.linwang.tech/2022/01/23/RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86">SpringMVC系列(一)—RequestMapping注解的原理</a>这篇文章中，我们学习了@RequestMapping注解的原理，以及http请求的流程，但是springMVC到底是如何根据request的url请求来匹配到具体的url规则呢，本章我们就来详细的学习一下。<br>我们知道RequestMapping不仅仅支持精准匹配，还可以进行模糊匹配，即使用* ？ **等通配符，下面我们就分别来看下这两种方式是如何实现的。</p>
@@ -293,13 +309,13 @@
 <p><img src="/image-20220123201623903.png"></p>
 <p>图中红框的代码为关键代码，调用lookupHandlerMethod来获取指定lookupPath的handlerMethod，我们继续查看lookupHandlerMethod源码。</p>
 <p><img src="/image-20220123202048571.png"></p>
-<p>​    lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章XXX。</p>
+<p>​    lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章<a href="https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/">SpringMVC系列(二)—RequestMapping中url匹配原理</a>。</p>
 ]]></content>
       <categories>
-        <category>Spring系列</category>
+        <category>Spring源码</category>
       </categories>
       <tags>
-        <tag>spring注解</tag>
+        <tag>SpringMVC系列</tag>
       </tags>
   </entry>
   <entry>
