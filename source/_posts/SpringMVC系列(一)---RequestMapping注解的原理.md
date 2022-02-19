@@ -1,9 +1,10 @@
 ---
-title: RequestMapping注解的原理
+title: SpringMVC系列(一)---RequestMapping注解的原理
 author: linWang
 date: 2022-01-23 17:32:08
-tags: spring注解
-categories: Spring系列
+tags: SpringMVC系列
+categories: Spring源码
+top: true
 ---
 
 >   本文将从源码的角度分析@RequestMapping注解的作用，以及不同的url请求是如何路由到对应的method中的
@@ -129,4 +130,4 @@ registry方法的主要步骤如下：
 
 ![](image-20220123202048571.png)
 
-​	lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章XXX。
+​	lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章[SpringMVC系列(二)---RequestMapping中url匹配原理](https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/)。
