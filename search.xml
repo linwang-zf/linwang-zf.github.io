@@ -1,118 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <search>
   <entry>
-    <title>Git命令总结</title>
-    <url>/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/</url>
-    <content><![CDATA[<blockquote>
-<p>  本文总结了平时生活中经常用到的Git命令，详细的描述了命令的用法，后续还会继续补充，方便以后查看。</p>
-</blockquote>
-<span id="more"></span>
-
-<h2 id="Git的配置命令"><a href="#Git的配置命令" class="headerlink" title="Git的配置命令"></a>Git的配置命令</h2><h3 id="初始化仓库"><a href="#初始化仓库" class="headerlink" title="初始化仓库"></a>初始化仓库</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入某个目录</span></span><br><span class="line">cd d:/gitDemo</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2. 初始化(执行之后，在当前目录下会有一个.git文件夹)</span></span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
-
-<h3 id="配置Git的邮箱和用户名"><a href="#配置Git的邮箱和用户名" class="headerlink" title="配置Git的邮箱和用户名"></a>配置Git的邮箱和用户名</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局邮箱地址</span></span><br><span class="line">git config --global user.email &quot;903862530@qq.com&quot;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局用户名</span></span><br><span class="line">git config --global user.name &quot;linwang-zf&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看全局配置的用户名和邮箱地址</span></span><br><span class="line">git config --global user.email</span><br><span class="line">git config --global user.name</span><br></pre></td></tr></table></figure>
-
-<h2 id="Git常用命令"><a href="#Git常用命令" class="headerlink" title="Git常用命令"></a>Git常用命令</h2><h3 id="add-和-commit"><a href="#add-和-commit" class="headerlink" title="add 和 commit"></a>add 和 commit</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.将工作区的修改提交到暂存区</span></span><br><span class="line">git add .</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将暂存区的内容提交到版本库</span></span><br><span class="line">git commit -m &quot;note&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果修改的文件已经被Git管理，则上述命令可以简化为</span></span><br><span class="line">git commit -am &quot;note&quot;</span><br></pre></td></tr></table></figure>
-
-<h3 id="status"><a href="#status" class="headerlink" title="status"></a>status</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 该命令会比较 &lt;工作区和暂存区的内容&gt; 和 &lt;暂存区和版本库的内容&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 比较结果用颜色区分：</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（1）工作区和暂存区的内容不一致时，此时文件的颜色为红色</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（2）暂存区和版本库的内容不一致时，此时文件的颜色为绿色</span></span><br><span class="line">git status</span><br></pre></td></tr></table></figure>
-
-<h3 id="cherry-pick"><a href="#cherry-pick" class="headerlink" title="cherry-pick"></a>cherry-pick</h3><p><code>git cherry-pick</code>可以将**某次提交或者某几个提交(其他分支)**检入当前分支，详细的操作如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某次提交的commitHash值检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
-
-<p>举例来说，代码仓库目前有两个分支master和feature，提交历史如下图</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220110230544989.png" alt="cherry-pick演示"></p>
-<p>现在将feature分支的提交f应用到master分支上，命令如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.切换到master分支</span></span><br><span class="line">git checkout master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.Cherry Pick操作</span></span><br><span class="line">git cherry-pick f</span><br></pre></td></tr></table></figure>
-
-<p>除了上述的单次提交之外，cherry-pick还支持<strong>检入多次提交</strong>以及<strong>一段连续提交</strong>到当前分支，命令如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将A和B两个提交检入当前分支</span></span><br><span class="line">git cherry-pick &lt;HashA&gt; &lt;HashB&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将A到B的所有提交检入当前分支(提交A必须先于提交B，且不会包含A提交)</span></span><br><span class="line">git cherry-pick A..B (不包含A提交,相当于(A,B])</span><br><span class="line">git cherry-pick A^..B (包含A提交,相当于[A,B])</span><br></pre></td></tr></table></figure>
-
-<p>当检入的过程中发生了冲突，此时cherry-pick将停下来，让用户决定如何操作：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突后，取消操作，并回退到操作之前的样子</span></span><br><span class="line">git cherry-pick --abort</span><br><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突后，取消操作，但是不会回退到操作之前的样子</span></span><br><span class="line">git cherry-pick --quit</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 解决完冲突后,并继续执行(最常用的方式)</span></span><br><span class="line">git add .</span><br><span class="line">git cherry-pick --continue</span><br></pre></td></tr></table></figure>
-
-<p><code>cherry-pick</code>命令还支持配置参数，命令如下(命令中的 | 表示两者都可以)</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 在提交的时候，打开外部编辑器，可以编辑提交信息，如果发生冲突，在解决冲突之后仍然会打开</span></span><br><span class="line">git cherry-pick -e | --edit &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 只将commitHash提交更新到工作区和暂存区，不提交到版本库</span></span><br><span class="line">git cherry-pick -n | --no-commit &lt;commitHash&gt; </span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 提交的信息后面增加一行 “(cherry picked from commit ...)”，方便以后查到这个提交是如何产生的</span></span><br><span class="line">git cherry-pick -x &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 在提交信息的末尾追加一行操作者的签名，方便以后查到这个提交是如何产生的。</span></span><br><span class="line">git cherry-pick -s | --signoff &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当commitHash提交是一个merge提交时，cherry-pick将默认失败，此时可以采用-m告诉git应该采用哪个分支的变动</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 1表示接受变动的分支(merge时所处的分支)，2表示变动来源的分支(merge时指定合并的分支)</span></span><br><span class="line">git cherry-pick -m | --mainline 1 &lt;commitHash&gt; </span><br></pre></td></tr></table></figure>
-
-<p><code>cherry-pick</code>还支持将远程仓库的某次提交检入当前分支，具体命令如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 增加远程仓库的地址</span></span><br><span class="line">git remote add origin git://gitAddress</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将远程仓库抓取到本地</span></span><br><span class="line">git fetch origin</span><br><span class="line"><span class="meta">#</span><span class="bash"> 查找将要检入的commitHash</span></span><br><span class="line">git log origin/master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将上述获取的commitHash检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
-
-<h3 id="stash"><a href="#stash" class="headerlink" title="stash"></a>stash</h3><p>某一天你在dev分支上开发新需求时，突然被要求改一个线上的紧急Bug，此时你新的功能还未开发完成，不想进行提交。这个时候你就可以采用stash命令，将工作区和暂存区的内容放入栈中，然后切换到其他分支修复bug，当修复完成后，再从栈顶中取出刚刚的内容继续后续的开发。详细的命令如下：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 保存当前工作区和暂存区的修改内容,括号中的命令可以增加注释信息</span></span><br><span class="line">git stash (git stash save &quot;message&quot;)</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 显示栈中保存信息的列表</span></span><br><span class="line">git stash list</span><br></pre></td></tr></table></figure>
-
-<p>当需要从栈中取出之前保存的信息时，可以采用下面的命令：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 从栈顶取出一次改动内容，并从栈中删除(恢复最新的进度到工作区)</span></span><br><span class="line">git stash pop</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 恢复最新的进度到工作区和暂存区(尝试将原来暂存区的改动还恢复到暂存区)</span></span><br><span class="line">git stash pop --index</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将指定的进度恢复到工作区</span></span><br><span class="line">git stash pop stash@&#123;1&#125;</span><br></pre></td></tr></table></figure>
-
-<p>下面简要分析加–index和不加的区别。</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223151327.png" alt="git statsh之前的文件状态"></p>
-<p>从上图中可以看出，testStash文件此时处于暂存区的改动（即已经进行了add操作，还未进行commit操作），这时采用<code>git stash</code>将修改内容保存到栈中，当我们用<code>git stash pop</code>命令取出内容时，效果如下：</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223513807.png" alt="git stash pop操作结果"></p>
-<p>从上图中可以看到，如果不加–index，Git会将所有的改动全部放入工作区(即还未add的状态)，如果加了–index则和之前的状态保持一致。</p>
-<p>如果恢复保存进度的时候不想要删除栈中的进度，则可以使用下面的命令：</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> apply命令和pop命令的用法完全一致，区别仅在于pop会删除进度，而apply不会</span></span><br><span class="line">git stash apply </span><br></pre></td></tr></table></figure>
-
-<p><strong>删除栈中进度命令</strong></p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 删除stash_id对应的进度，如果没有指定，则删除最新的进度</span></span><br><span class="line">git stash drop [stash_id]</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清除栈中所有存储的进度</span></span><br><span class="line">git stash clear</span><br></pre></td></tr></table></figure>
-
-<h3 id="rebase"><a href="#rebase" class="headerlink" title="rebase"></a>rebase</h3><h4 id="rebase常用命令"><a href="#rebase常用命令" class="headerlink" title="rebase常用命令"></a>rebase常用命令</h4><h4 id="rebase和merge的区别"><a href="#rebase和merge的区别" class="headerlink" title="rebase和merge的区别"></a>rebase和merge的区别</h4><p>当我们在自己的分支上开发完成后，通常需要合并其他分支，我们一般会使用merge命令来合并，但是其实也可以采用rebase命令。</p>
-<p>假设git当前的Commit提交记录如下所示：</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231142561.png" alt="git原始commit图"></p>
-<p>此时分别在master分支和mywork分支上进行两次提交，提交之后状态如下图：</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231336735.png" alt="提交两次之后的commit图"></p>
-<p>此时在master上合并mywork分支，如果使用merge命令，则合并之后的图如下所示：</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231555007.png" alt="merge合并示意图"></p>
-<p>如果采用rebase合并，则合并之后如下所示：</p>
-<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231647697.png" alt="rebase合并示意图"></p>
-<p>从上述分析可以知道，rebase在合并的时候采用的方法时变基，这样的好处是让提交更整齐，但是可能会带来很多冲突；merge合并则直接将两个分支进行合并为一个分支，简单粗暴。</p>
-<h2 id="Git远程仓库命令"><a href="#Git远程仓库命令" class="headerlink" title="Git远程仓库命令"></a>Git远程仓库命令</h2><h3 id="筛选远程仓库地址"><a href="#筛选远程仓库地址" class="headerlink" title="筛选远程仓库地址"></a>筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
-<h3 id="关联远程分支"><a href="#关联远程分支" class="headerlink" title="关联远程分支"></a>关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
-
-<h3 id="同步远程分支"><a href="#同步远程分支" class="headerlink" title="同步远程分支"></a>同步远程分支</h3><p>同步远程分支，并且可以删除远程不存在的本地分支</p>
-<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 同步远程分支</span></span><br><span class="line">1. git remote prune origin</span><br></pre></td></tr></table></figure>
-
-<h2 id="分支命令"><a href="#分支命令" class="headerlink" title="分支命令"></a>分支命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某个提交(其他分支)检入当前分支</span></span><br><span class="line">git cherry-pick hashCommit</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将某个分支连续的提交检入当前分支(包含开始的提交的分支e1223b03)</span></span><br><span class="line">git cherry-pick e1223b03^..47eee952</span><br><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突之后，解决冲突</span></span><br><span class="line">git add .</span><br><span class="line">git cherry-pick --continue</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看分支名，并匹配以*开头的分支(当前分支)，并打印最后一个字符串的值(以空格分割)</span></span><br><span class="line">git branch|egrep &#x27;^\*&#x27;|awk &#x27;&#123;print $NF&#125;&#x27;</span><br></pre></td></tr></table></figure>
-
-<h2 id="checkout相关命令"><a href="#checkout相关命令" class="headerlink" title="checkout相关命令"></a>checkout相关命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将dev分支的某个文件检入master分支</span></span><br><span class="line">1. git checkout master</span><br><span class="line">2. git checkout --patch dev filePath</span><br></pre></td></tr></table></figure>
-
-]]></content>
-      <tags>
-        <tag>git命令</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>家用路由器桥接</title>
-    <url>/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/</url>
-    <content><![CDATA[<h2 id="序"><a href="#序" class="headerlink" title="序"></a>序</h2><p>我们都知道，路由器的信号会随着距离的增加而变弱，尤其是中间还隔着障碍物时。这样势必就会导致家里面有些房间的wifi信号很差。此时我们就可以采用“桥接 ”或“中继”模式，将两个路由器连接起来，进而达到放大家用路由器wifi信号的功能。</p>
-<span id="more"></span>
-
-<h2 id="桥接和中继的区别"><a href="#桥接和中继的区别" class="headerlink" title="桥接和中继的区别"></a>桥接和中继的区别</h2><p>以下是我自己的理解。<br>路由器的桥接是将两个不同的局域网连接起来，第二个路由器叫做二级路由，这个二级路由有自己的网关、网端、并且可以自主分配DHCP服务器。中继模式则是将主路由的wifi信号进行扩大，第二个路由器相当于交换机，需要将网关和主路由的网关设置在同一网段、并且需要关闭DHCP功能，在中继模式下，接入副路由器的终端设备是从主路由获取的IP地址。<br>综上，桥接模式和中继模式的区别可以从两个方面区分：</p>
-<ul>
-<li>看接入副路由器的设备的ip地址和主路由的ip地址是否在同一网段：在同一网段为中继模式，不在同一网段为桥接模式</li>
-<li>看副路由和主路由的连接方式：主路由LAN -&gt; 副路由WAN(有线、无线均可)为桥接、主路由LAN -&gt; 副路由LAN(有线、无线均可)为中继</li>
-</ul>
-<h2 id="无线桥接实例"><a href="#无线桥接实例" class="headerlink" title="无线桥接实例"></a>无线桥接实例</h2><p>主路由器：小米<br>副路由器：Tenda N300 v2(相当老的一个路由器，没有5g芯片，哈哈哈)</p>
-<h2 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h2><p>主路由器可以正常上网，记住主路由器的SSID、密码即可<br>下面开始对副路由器进行设置：</p>
-<ol>
-<li>连接tenda的wifi，第一次不需要输入密码</li>
-<li>登录路由器管理界面：192.168.0.1</li>
-<li>打开无线设置 -&gt; 找到无线基本设置 -&gt; 选择网桥(WDS) -&gt; 开始扫描 -&gt; 勾选主路由器的SSID</li>
-</ol>
-<p><img src="/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/1.png" alt="image.png"></p>
-<pre><code>4. 选择无线加密 -&gt; 禁用WPS，设置副路由器的安全规则、加密算法和密码(与主路由相同)
-</code></pre>
-<ol start="5">
-<li>选择高级设置 -&gt; 选择WAN口介质类型 -&gt; 选择无线WAN -&gt; 输入主路由器的SSID和密码，并开始扫描</li>
-</ol>
-<p><img src="/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/2.png" alt="image.png"></p>
-]]></content>
-      <categories>
-        <category>路由器</category>
-      </categories>
-      <tags>
-        <tag>路由器</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>SpringMVC系列(三)---参数解析流程</title>
     <url>/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%89)---%E5%8F%82%E6%95%B0%E8%A7%A3%E6%9E%90%E6%B5%81%E7%A8%8B/</url>
     <content><![CDATA[<blockquote>
@@ -261,7 +149,7 @@
 </ul>
 </li>
 </ul>
-<p>在获取到HandlerMethod后，下一步就是要执行真正的函数了，但是在执行之前，有一步最重要的过程，就是参数解析和映射，这一块内容的详细讲解请看XXX文章。</p>
+<p>在获取到HandlerMethod后，下一步就是要执行真正的函数了，但是在执行之前，有一步最重要的过程，就是参数解析和映射，这一块内容的详细讲解请看<a href="https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%89)---%E5%8F%82%E6%95%B0%E8%A7%A3%E6%9E%90%E6%B5%81%E7%A8%8B/#more">SpringMVC系列(三)—参数解析流程</a>文章。</p>
 ]]></content>
       <categories>
         <category>Spring源码</category>
@@ -389,6 +277,120 @@
       </categories>
       <tags>
         <tag>SpringMVC系列</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Git命令总结</title>
+    <url>/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/</url>
+    <content><![CDATA[<blockquote>
+<p>  本文总结了平时生活中经常用到的Git命令，详细的描述了命令的用法，后续还会继续补充，方便以后查看。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="Git的配置命令"><a href="#Git的配置命令" class="headerlink" title="Git的配置命令"></a>Git的配置命令</h2><h3 id="初始化仓库"><a href="#初始化仓库" class="headerlink" title="初始化仓库"></a>初始化仓库</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.进入某个目录</span></span><br><span class="line">cd d:/gitDemo</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2. 初始化(执行之后，在当前目录下会有一个.git文件夹)</span></span><br><span class="line">git init</span><br></pre></td></tr></table></figure>
+
+<h3 id="配置Git的邮箱和用户名"><a href="#配置Git的邮箱和用户名" class="headerlink" title="配置Git的邮箱和用户名"></a>配置Git的邮箱和用户名</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局邮箱地址</span></span><br><span class="line">git config --global user.email &quot;903862530@qq.com&quot;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 设置git的全局用户名</span></span><br><span class="line">git config --global user.name &quot;linwang-zf&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看全局配置的用户名和邮箱地址</span></span><br><span class="line">git config --global user.email</span><br><span class="line">git config --global user.name</span><br></pre></td></tr></table></figure>
+
+<h2 id="Git常用命令"><a href="#Git常用命令" class="headerlink" title="Git常用命令"></a>Git常用命令</h2><h3 id="add-和-commit"><a href="#add-和-commit" class="headerlink" title="add 和 commit"></a>add 和 commit</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.将工作区的修改提交到暂存区</span></span><br><span class="line">git add .</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.将暂存区的内容提交到版本库</span></span><br><span class="line">git commit -m &quot;note&quot;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 如果修改的文件已经被Git管理，则上述命令可以简化为</span></span><br><span class="line">git commit -am &quot;note&quot;</span><br></pre></td></tr></table></figure>
+
+<h3 id="status"><a href="#status" class="headerlink" title="status"></a>status</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 该命令会比较 &lt;工作区和暂存区的内容&gt; 和 &lt;暂存区和版本库的内容&gt;</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 比较结果用颜色区分：</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（1）工作区和暂存区的内容不一致时，此时文件的颜色为红色</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 	（2）暂存区和版本库的内容不一致时，此时文件的颜色为绿色</span></span><br><span class="line">git status</span><br></pre></td></tr></table></figure>
+
+<h3 id="cherry-pick"><a href="#cherry-pick" class="headerlink" title="cherry-pick"></a>cherry-pick</h3><p><code>git cherry-pick</code>可以将**某次提交或者某几个提交(其他分支)**检入当前分支，详细的操作如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某次提交的commitHash值检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
+
+<p>举例来说，代码仓库目前有两个分支master和feature，提交历史如下图</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220110230544989.png" alt="cherry-pick演示"></p>
+<p>现在将feature分支的提交f应用到master分支上，命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 1.切换到master分支</span></span><br><span class="line">git checkout master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 2.Cherry Pick操作</span></span><br><span class="line">git cherry-pick f</span><br></pre></td></tr></table></figure>
+
+<p>除了上述的单次提交之外，cherry-pick还支持<strong>检入多次提交</strong>以及<strong>一段连续提交</strong>到当前分支，命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将A和B两个提交检入当前分支</span></span><br><span class="line">git cherry-pick &lt;HashA&gt; &lt;HashB&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将A到B的所有提交检入当前分支(提交A必须先于提交B，且不会包含A提交)</span></span><br><span class="line">git cherry-pick A..B (不包含A提交,相当于(A,B])</span><br><span class="line">git cherry-pick A^..B (包含A提交,相当于[A,B])</span><br></pre></td></tr></table></figure>
+
+<p>当检入的过程中发生了冲突，此时cherry-pick将停下来，让用户决定如何操作：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突后，取消操作，并回退到操作之前的样子</span></span><br><span class="line">git cherry-pick --abort</span><br><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突后，取消操作，但是不会回退到操作之前的样子</span></span><br><span class="line">git cherry-pick --quit</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 解决完冲突后,并继续执行(最常用的方式)</span></span><br><span class="line">git add .</span><br><span class="line">git cherry-pick --continue</span><br></pre></td></tr></table></figure>
+
+<p><code>cherry-pick</code>命令还支持配置参数，命令如下(命令中的 | 表示两者都可以)</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 在提交的时候，打开外部编辑器，可以编辑提交信息，如果发生冲突，在解决冲突之后仍然会打开</span></span><br><span class="line">git cherry-pick -e | --edit &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 只将commitHash提交更新到工作区和暂存区，不提交到版本库</span></span><br><span class="line">git cherry-pick -n | --no-commit &lt;commitHash&gt; </span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 提交的信息后面增加一行 “(cherry picked from commit ...)”，方便以后查到这个提交是如何产生的</span></span><br><span class="line">git cherry-pick -x &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 在提交信息的末尾追加一行操作者的签名，方便以后查到这个提交是如何产生的。</span></span><br><span class="line">git cherry-pick -s | --signoff &lt;commitHash&gt;</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 当commitHash提交是一个merge提交时，cherry-pick将默认失败，此时可以采用-m告诉git应该采用哪个分支的变动</span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 1表示接受变动的分支(merge时所处的分支)，2表示变动来源的分支(merge时指定合并的分支)</span></span><br><span class="line">git cherry-pick -m | --mainline 1 &lt;commitHash&gt; </span><br></pre></td></tr></table></figure>
+
+<p><code>cherry-pick</code>还支持将远程仓库的某次提交检入当前分支，具体命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 增加远程仓库的地址</span></span><br><span class="line">git remote add origin git://gitAddress</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将远程仓库抓取到本地</span></span><br><span class="line">git fetch origin</span><br><span class="line"><span class="meta">#</span><span class="bash"> 查找将要检入的commitHash</span></span><br><span class="line">git log origin/master</span><br><span class="line"><span class="meta">#</span><span class="bash"> 将上述获取的commitHash检入当前分支</span></span><br><span class="line">git cherry-pick &lt;commitHash&gt;</span><br></pre></td></tr></table></figure>
+
+<h3 id="stash"><a href="#stash" class="headerlink" title="stash"></a>stash</h3><p>某一天你在dev分支上开发新需求时，突然被要求改一个线上的紧急Bug，此时你新的功能还未开发完成，不想进行提交。这个时候你就可以采用stash命令，将工作区和暂存区的内容放入栈中，然后切换到其他分支修复bug，当修复完成后，再从栈顶中取出刚刚的内容继续后续的开发。详细的命令如下：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 保存当前工作区和暂存区的修改内容,括号中的命令可以增加注释信息</span></span><br><span class="line">git stash (git stash save &quot;message&quot;)</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 显示栈中保存信息的列表</span></span><br><span class="line">git stash list</span><br></pre></td></tr></table></figure>
+
+<p>当需要从栈中取出之前保存的信息时，可以采用下面的命令：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 从栈顶取出一次改动内容，并从栈中删除(恢复最新的进度到工作区)</span></span><br><span class="line">git stash pop</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 恢复最新的进度到工作区和暂存区(尝试将原来暂存区的改动还恢复到暂存区)</span></span><br><span class="line">git stash pop --index</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将指定的进度恢复到工作区</span></span><br><span class="line">git stash pop stash@&#123;1&#125;</span><br></pre></td></tr></table></figure>
+
+<p>下面简要分析加–index和不加的区别。</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223151327.png" alt="git statsh之前的文件状态"></p>
+<p>从上图中可以看出，testStash文件此时处于暂存区的改动（即已经进行了add操作，还未进行commit操作），这时采用<code>git stash</code>将修改内容保存到栈中，当我们用<code>git stash pop</code>命令取出内容时，效果如下：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220111223513807.png" alt="git stash pop操作结果"></p>
+<p>从上图中可以看到，如果不加–index，Git会将所有的改动全部放入工作区(即还未add的状态)，如果加了–index则和之前的状态保持一致。</p>
+<p>如果恢复保存进度的时候不想要删除栈中的进度，则可以使用下面的命令：</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> apply命令和pop命令的用法完全一致，区别仅在于pop会删除进度，而apply不会</span></span><br><span class="line">git stash apply </span><br></pre></td></tr></table></figure>
+
+<p><strong>删除栈中进度命令</strong></p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 删除stash_id对应的进度，如果没有指定，则删除最新的进度</span></span><br><span class="line">git stash drop [stash_id]</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 清除栈中所有存储的进度</span></span><br><span class="line">git stash clear</span><br></pre></td></tr></table></figure>
+
+<h3 id="rebase"><a href="#rebase" class="headerlink" title="rebase"></a>rebase</h3><h4 id="rebase常用命令"><a href="#rebase常用命令" class="headerlink" title="rebase常用命令"></a>rebase常用命令</h4><h4 id="rebase和merge的区别"><a href="#rebase和merge的区别" class="headerlink" title="rebase和merge的区别"></a>rebase和merge的区别</h4><p>当我们在自己的分支上开发完成后，通常需要合并其他分支，我们一般会使用merge命令来合并，但是其实也可以采用rebase命令。</p>
+<p>假设git当前的Commit提交记录如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231142561.png" alt="git原始commit图"></p>
+<p>此时分别在master分支和mywork分支上进行两次提交，提交之后状态如下图：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231336735.png" alt="提交两次之后的commit图"></p>
+<p>此时在master上合并mywork分支，如果使用merge命令，则合并之后的图如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231555007.png" alt="merge合并示意图"></p>
+<p>如果采用rebase合并，则合并之后如下所示：</p>
+<p><img src="/2022/01/06/Git%E5%91%BD%E4%BB%A4%E6%80%BB%E7%BB%93/image-20220113231647697.png" alt="rebase合并示意图"></p>
+<p>从上述分析可以知道，rebase在合并的时候采用的方法时变基，这样的好处是让提交更整齐，但是可能会带来很多冲突；merge合并则直接将两个分支进行合并为一个分支，简单粗暴。</p>
+<h2 id="Git远程仓库命令"><a href="#Git远程仓库命令" class="headerlink" title="Git远程仓库命令"></a>Git远程仓库命令</h2><h3 id="筛选远程仓库地址"><a href="#筛选远程仓库地址" class="headerlink" title="筛选远程仓库地址"></a>筛选远程仓库地址</h3><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 查看远程仓库的地址,只显示一行，并筛选中第二列元素(仓库地址)</span></span><br><span class="line">git remote -v|head -1|awk &#x27;&#123;print $2&#125;&#x27;</span><br></pre></td></tr></table></figure>
+<h3 id="关联远程分支"><a href="#关联远程分支" class="headerlink" title="关联远程分支"></a>关联远程分支</h3><p>在关联远程分支的同时，在本地创建一个同名分支</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 关联远程dev分支，并在本地创建一个同名dev分支</span></span><br><span class="line">git checkout --track origin/dev</span><br></pre></td></tr></table></figure>
+
+<h3 id="同步远程分支"><a href="#同步远程分支" class="headerlink" title="同步远程分支"></a>同步远程分支</h3><p>同步远程分支，并且可以删除远程不存在的本地分支</p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 同步远程分支</span></span><br><span class="line">1. git remote prune origin</span><br></pre></td></tr></table></figure>
+
+<h2 id="分支命令"><a href="#分支命令" class="headerlink" title="分支命令"></a>分支命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将某个提交(其他分支)检入当前分支</span></span><br><span class="line">git cherry-pick hashCommit</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 将某个分支连续的提交检入当前分支(包含开始的提交的分支e1223b03)</span></span><br><span class="line">git cherry-pick e1223b03^..47eee952</span><br><span class="line"><span class="meta">#</span><span class="bash"> 发生冲突之后，解决冲突</span></span><br><span class="line">git add .</span><br><span class="line">git cherry-pick --continue</span><br><span class="line"><span class="meta"></span></span><br><span class="line"><span class="meta">#</span><span class="bash"> 查看分支名，并匹配以*开头的分支(当前分支)，并打印最后一个字符串的值(以空格分割)</span></span><br><span class="line">git branch|egrep &#x27;^\*&#x27;|awk &#x27;&#123;print $NF&#125;&#x27;</span><br></pre></td></tr></table></figure>
+
+<h2 id="checkout相关命令"><a href="#checkout相关命令" class="headerlink" title="checkout相关命令"></a>checkout相关命令</h2><figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 将dev分支的某个文件检入master分支</span></span><br><span class="line">1. git checkout master</span><br><span class="line">2. git checkout --patch dev filePath</span><br></pre></td></tr></table></figure>
+
+]]></content>
+      <tags>
+        <tag>git命令</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>家用路由器桥接</title>
+    <url>/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/</url>
+    <content><![CDATA[<blockquote>
+<p>  我们都知道，路由器的信号会随着距离的增加而变弱，尤其是中间还隔着障碍物时。这样势必就会导致家里面有些房间的wifi信号很差。此时我们就可以采用“桥接 ”或“中继”模式，将两个路由器连接起来，进而达到放大家用路由器wifi信号的功能。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="桥接和中继的区别"><a href="#桥接和中继的区别" class="headerlink" title="桥接和中继的区别"></a>桥接和中继的区别</h2><p>以下是我自己的理解。<br>路由器的桥接是将两个不同的局域网连接起来，第二个路由器叫做二级路由，这个二级路由有自己的网关、网端、并且可以自主分配DHCP服务器。中继模式则是将主路由的wifi信号进行扩大，第二个路由器相当于交换机，需要将网关和主路由的网关设置在同一网段、并且需要关闭DHCP功能，在中继模式下，接入副路由器的终端设备是从主路由获取的IP地址。<br>综上，桥接模式和中继模式的区别可以从两个方面区分：</p>
+<ul>
+<li>看接入副路由器的设备的ip地址和主路由的ip地址是否在同一网段：在同一网段为中继模式，不在同一网段为桥接模式</li>
+<li>看副路由和主路由的连接方式：主路由LAN -&gt; 副路由WAN(有线、无线均可)为桥接、主路由LAN -&gt; 副路由LAN(有线、无线均可)为中继</li>
+</ul>
+<h2 id="无线桥接实例"><a href="#无线桥接实例" class="headerlink" title="无线桥接实例"></a>无线桥接实例</h2><p>主路由器：小米<br>副路由器：Tenda N300 v2(相当老的一个路由器，没有5g芯片，哈哈哈)</p>
+<h2 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h2><p>主路由器可以正常上网，记住主路由器的SSID、密码即可<br>下面开始对副路由器进行设置：</p>
+<ol>
+<li>连接tenda的wifi，第一次不需要输入密码</li>
+<li>登录路由器管理界面：192.168.0.1</li>
+<li>打开无线设置 -&gt; 找到无线基本设置 -&gt; 选择网桥(WDS) -&gt; 开始扫描 -&gt; 勾选主路由器的SSID</li>
+</ol>
+<p><img src="/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/1.png" alt="image.png"></p>
+<pre><code>4. 选择无线加密 -&gt; 禁用WPS，设置副路由器的安全规则、加密算法和密码(与主路由相同)
+</code></pre>
+<ol start="5">
+<li>选择高级设置 -&gt; 选择WAN口介质类型 -&gt; 选择无线WAN -&gt; 输入主路由器的SSID和密码，并开始扫描</li>
+</ol>
+<p><img src="/2022/02/19/%E5%AE%B6%E7%94%A8%E8%B7%AF%E7%94%B1%E5%99%A8%E6%A1%A5%E6%8E%A5/2.png" alt="image.png"></p>
+]]></content>
+      <categories>
+        <category>路由器</category>
+      </categories>
+      <tags>
+        <tag>路由器</tag>
       </tags>
   </entry>
   <entry>
