@@ -219,6 +219,18 @@ git stash clear
 
 ## Git远程仓库命令
 
+### 删除远程仓库
+
+```shell
+# 将空分支推送到远程dev分支，即删除远程dev分支
+1. git push origin :dev
+
+# 删除远程的dev分支
+2. git push --delete origin/dev
+```
+
+
+
 ### 筛选远程仓库地址
 
 ```shell
