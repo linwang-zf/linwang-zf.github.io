@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"linwang-zf.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="本文将从源码的角度分析@RequestMapping注解的作用，以及不同的url请求是如何路由到对应的method中的     类名 简要描述    RequestMappingHandlerMapping 用来解析@RequestMapping或者@Controlleriu修饰的类或者方法   AbstractHandlerMethodMapping 在解析过程中大多数的方法都是在此类中">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SpringMVC系列(一)---RequestMapping注解的原理">
+<meta property="og:url" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/index.html">
+<meta property="og:site_name" content="逐风的博客">
+<meta property="og:description" content="本文将从源码的角度分析@RequestMapping注解的作用，以及不同的url请求是如何路由到对应的method中的     类名 简要描述    RequestMappingHandlerMapping 用来解析@RequestMapping或者@Controlleriu修饰的类或者方法   AbstractHandlerMethodMapping 在解析过程中大多数的方法都是在此类中">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123180434628.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123183240651.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123184544242.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123185209742.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123190959468.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123191213205.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193153797.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193720661.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193843918.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123200238042.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201008364.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201411809.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201623903.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123202048571.png">
+<meta property="article:published_time" content="2022-01-23T09:32:08.000Z">
+<meta property="article:modified_time" content="2023-04-16T08:28:12.067Z">
+<meta property="article:author" content="Lin Wang">
+<meta property="article:tag" content="SpringMVC系列">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123180434628.png">
+
+<link rel="canonical" href="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>SpringMVC系列(一)---RequestMapping注解的原理 | 逐风的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">逐风的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">让优秀成为一种习惯</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/yourname" class="github-corner" title="点击查看我的github" aria-label="点击查看我的github" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/myself.jpg">
+      <meta itemprop="name" content="Lin Wang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="逐风的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          SpringMVC系列(一)---RequestMapping注解的原理
+        </h1>
+
+        <div class="post-meta">
+		  
+		  
+  	        <i class="fa fa-thumb-tack" style="color: #EB6D39"></i>
+				<font color="#EB6D39">置顶</font>
+				<span class="post-meta-divider">|</span>
+	     
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-01-23 17:32:08" itemprop="dateCreated datePublished" datetime="2022-01-23T17:32:08+08:00">2022-01-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-16 16:28:12" itemprop="dateModified" datetime="2023-04-16T16:28:12+08:00">2023-04-16</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Spring%E6%BA%90%E7%A0%81/" itemprop="url" rel="index"><span itemprop="name">Spring源码</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span></span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>NaN:aN</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>  本文将从源码的角度分析@RequestMapping注解的作用，以及不同的url请求是如何路由到对应的method中的</p>
+</blockquote>
+<table>
+<thead>
+<tr>
+<th align="center">类名</th>
+<th align="center">简要描述</th>
+</tr>
+</thead>
+<tbody><tr>
+<td align="center">RequestMappingHandlerMapping</td>
+<td align="center">用来解析@RequestMapping或者@Controlleriu修饰的类或者方法</td>
+</tr>
+<tr>
+<td align="center">AbstractHandlerMethodMapping</td>
+<td align="center">在解析过程中大多数的方法都是在此类中</td>
+</tr>
+<tr>
+<td align="center">RequestMappingInfo</td>
+<td align="center">保存方法或者类上@RequestMapping注解中的信息</td>
+</tr>
+<tr>
+<td align="center">HandlerMethod</td>
+<td align="center">@RequestMapping注解修饰的方法最终被解析为的目标对象</td>
+</tr>
+<tr>
+<td align="center">MappingRegistry</td>
+<td align="center">解析后url到RequestMappingInfo、RequestMappingInfo到HandlerMethod的映射均保存在该类中</td>
+</tr>
+</tbody></table>
+<span id="more"></span>
+
+<p>​	在SpringBoot中，我们只需要在Controller的类和方法上增加一个@RequestMapping注解，就很容易的提供一个url匹配规则，这究竟是怎么做到的？下面我们从两个方面来分析。</p>
+<ul>
+<li>应用启动时被@RequestMapping注解的类或者方法会被怎么处理？</li>
+<li>SpringBoot又是如何将http请求正确的路由到指定的方法上？</li>
+</ul>
+<h2 id="RequestMapping-—-应用启动"><a href="#RequestMapping-—-应用启动" class="headerlink" title="@RequestMapping — 应用启动"></a>@RequestMapping — 应用启动</h2><p>​	这个时候，就必须要提到SpringMVC中一个很重要的类了 – RequestMappingHandlerMapping类，这个类的作用是将我们的Controller中的方法转换为一个RequestMappingInfo类，首先我们先来看一下RequestMappingHandlerMapping的类图：</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123180434628.png"></p>
+<p>​	从类图中可以看到，RequestMappingHandlerMapping类实现了InitializingBean接口，这个接口是Spring管理Bean的一个生命周期，实现了这个接口的Bean，spring会在实例化后执行该Bean的afterPropertiesSet()方法。再看这个方法的源码之前，我们要先思考一个问题，RequestMappingHandlerMapping是如何交给Spring来管理的呢？</p>
+<h3 id="RMHM的注入"><a href="#RMHM的注入" class="headerlink" title="RMHM的注入"></a>RMHM的注入</h3><p>​	通过全局搜索，发现RequestMappingHandlerMapping会在类WebMvcAutoConfiguration中通过@Bean的方式注入，那WebMvcAutoConfiguration又是怎么注入的呢，其实通过这个类的名字就可以看出来了，这个类是通过SpringBoot提供的AutoConfiguration的机制注入的，这个机制今天不展开来讲，简单的说，就是SpringBoot会在启动的时候，扫描全局的spring.factories文件，并将其中的实现类注入spring容器中，如图所示：</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123183240651.png"></p>
+<h3 id="RMHM的初始化"><a href="#RMHM的初始化" class="headerlink" title="RMHM的初始化"></a>RMHM的初始化</h3><p>​	回到我们之前提到的afterPropertiesSet方法，我们一起来看看这个方法中做了哪些事情？</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123184544242.png"></p>
+<p>​	方法中主要是对RequestMappingInfo中配置参数的一些初始化，重点我们关注红框中的内容，可以看到其调用了super的afterPropertiesSet方法，我们继续深入查看其源码。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123185209742.png"></p>
+<p>从上图中可以看出，super类中的afterPropertiesSet调用了initHandlerMethods，这个方法主要干了两件事：</p>
+<ul>
+<li><p>获取spring容器中的所有bean</p>
+</li>
+<li><p>遍历这些bean，判断是否为isHandler()，如果为true，则执行detectHandlerMethods方法。</p>
+</li>
+</ul>
+<p>isHandler的判断逻辑为(类上是否有Controller或者RequestMapping注解)：</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123190959468.png"></p>
+<p>​	当检测到类上有Controller或者RequestMapping注解时，进入下面的方法，重点关注红框中的selectMethods方法。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123191213205.png"> </p>
+<p>​	MethodIntrospector.selectMethods方法的含义是：遍历指定class类中的方法，对每个方法执行inspect函数，并返回method -&gt; inspect返回值的Map集合。对于上图中detectHandlerMethods中的selectMethods，inspect的返回值为RequestMappingInfo类。</p>
+<p>​	下面我们一起来看下getMappingForMethod中的具体内容：</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193153797.png"></p>
+<p>getMappingForMethod函数分为三个步骤：</p>
+<ul>
+<li><p>将method上的RequestMapping注解封装为RequestMappingInfo</p>
+</li>
+<li><p>将method所在类上的RequestMapping注解封装为RequestMappingInfo</p>
+</li>
+<li><p>将两个结合在一起(结合在一起是为了将url的匹配规则结合起来)</p>
+</li>
+</ul>
+<p>我们继续看detectHandlerMethods后面的代码，可以看到，后面就是将每个method注册为HandlerMethod了。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193720661.png"></p>
+<p>从上图中的代码中，我们就可以发现，handlerMethod被保存在了mappingRegistry中，继续查看register方法。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193843918.png"></p>
+<p>registry方法的主要步骤如下：</p>
+<ul>
+<li><p>根据类和method创建一个handlerMethod类</p>
+</li>
+<li><p>将RequestMappingInfo -&gt; HandlerMethod的映射放入mappingLookup中</p>
+</li>
+<li><p>将url -&gt; RequestMappingInfo 的映射放入urlLookup中</p>
+</li>
+</ul>
+<p>至此，应用启动过程中@RequestMapping注解的类的解析过程就完成了，我们总结一下主要的步骤</p>
+<ul>
+<li><p>在RequestMappingHandlerMapping启动的过程执行afterPropertiesSet方法</p>
+</li>
+<li><p>遍历容器中的所有bean，如果该bean存在@Controller或者@RequestMapping注解，则解析该bean</p>
+</li>
+<li><p>解析该bean中所有的方法，查找方法上是否有@RequestMapping注解，如果存在，则将@RequestMapping中的信息保存到RequestMappingInfo中</p>
+</li>
+<li><p>将方法返回的RequestMappingInfo和bean的RequestMappingInfo结合起来，并保存为Map&lt;Method, RequestMappingInfo&gt;集合</p>
+</li>
+<li><p>对每个method创建HandlerMethod类，并将RequestMappingInfo -&gt; HandlerMethod保存到mappingRegistry的属性mappingLookup中</p>
+</li>
+<li><p>将url -&gt; RequestMappingInfo 的映射保存到mappingRegistry的属性urlLookup中</p>
+</li>
+</ul>
+<h2 id="RequestMapping-—-请求转发"><a href="#RequestMapping-—-请求转发" class="headerlink" title="@RequestMapping — 请求转发"></a>@RequestMapping — 请求转发</h2><p>​	上述部分主要讲述了，Springboot在启动的时候，RequestMappingHandlerMapping是如何解析被@RequestMapping修饰的类或者方法的，在本小节中，将带领大家了解一下http请求是如何被正确的路由到对应的方法中的。</p>
+<p>​	我们知道SpringMVC中流量转发是通过DispatcherServlet类的doService方法中的doDispatch方法实现的，下面我们一起来看下doDispatch的源码。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123200238042.png"></p>
+<p>​	我们只关注doDispatch中部分相关源码。当http请求到来时，doDispatch会通过getHandler方法获取Request对应的Handler，此处的Handler就是我们自己编写的方法，所以我们只需要继续看getHandler的源码即可。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201008364.png"></p>
+<p>​	getHandler函数的源码比较简单，就是通过遍历handlerMappings来获取Handler的执行链。我们从图中可以看到总共有7个handlerMappings，在前面小节中我们已经知道了RequestMappingHandlerMapping才是解析的关键，所以我们继续深入查看RequestMappingHandlerMapping中getHandler的源码。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201411809.png"></p>
+<p>从图中可以看到getHandler调用了getHandlerInternal方法来获取handler，我们继续深入探索。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201623903.png"></p>
+<p>图中红框的代码为关键代码，调用lookupHandlerMethod来获取指定lookupPath的handlerMethod，我们继续查看lookupHandlerMethod源码。</p>
+<p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123202048571.png"></p>
+<p>​	lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章<a target="_blank" rel="noopener" href="https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/">SpringMVC系列(二)—RequestMapping中url匹配原理</a>。</p>
+
+    </div>
+
+    
+    
+    
+    
+      <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-heart"></i> 感谢阅读-------------</div>
+
+
+    
+
+      <footer class="post-footer">
+        
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/01/08/Python%E7%88%AC%E5%8F%96%E3%80%8A%E8%B0%81%E6%98%AF%E9%AB%98%E6%89%8B%C2%B7%E5%8F%8C%E5%8D%87%E3%80%8B%E8%A7%86%E9%A2%91%E9%93%BE%E6%8E%A5/" rel="prev" title="Python爬取“谁是高手·双升”视频链接">
+      <i class="fa fa-chevron-left"></i> Python爬取“谁是高手·双升”视频链接
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/" rel="next" title="SpringMVC系列(二)---RequestMapping中url匹配原理">
+      SpringMVC系列(二)---RequestMapping中url匹配原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#RequestMapping-%E2%80%94-%E5%BA%94%E7%94%A8%E5%90%AF%E5%8A%A8"><span class="nav-number">1.</span> <span class="nav-text">@RequestMapping — 应用启动</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#RMHM%E7%9A%84%E6%B3%A8%E5%85%A5"><span class="nav-number">1.1.</span> <span class="nav-text">RMHM的注入</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RMHM%E7%9A%84%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.2.</span> <span class="nav-text">RMHM的初始化</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RequestMapping-%E2%80%94-%E8%AF%B7%E6%B1%82%E8%BD%AC%E5%8F%91"><span class="nav-number">2.</span> <span class="nav-text">@RequestMapping — 请求转发</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin Wang"
+      src="/images/myself.jpg">
+  <p class="site-author-name" itemprop="name">Lin Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/linwang-zf" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;linwang-zf" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Lin Wang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
