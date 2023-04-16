@@ -250,14 +250,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span></span>
+              <span>2.8k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>NaN:aN</span>
+              <span>3 分钟</span>
             </span>
 
         </div>
@@ -285,44 +285,44 @@
 <p>这个注解上面有两个注解：@Target、@Retention，这两个注解就是元注解。除了这两种外，常见的元注解还有：@Inherited、@Documented、@Repeatable。下面对这些注解进行一下简要的介绍。</p>
 <h3 id="Retention"><a href="#Retention" class="headerlink" title="@Retention"></a>@Retention</h3><p>当@Retention注解到其他注解上时，定义了这个注解的存活时间。他的取值如下所示：</p>
 <ul>
-<li>RetentionPolicy.SOURCE：表明注解只在源码阶段有效，编译器在编译时将忽视该注解，即不会保留在编译好的class文件中。</li>
-<li>RetentionPolicy.CLASS(<strong>默认</strong>)：表明注解不会被加载到JVM内存中，仅会在源码和Class文件中有效。</li>
-<li>RetentionPolicy.RUNTIME：在运行期时该注解的信息也存在，即可以通过Java的反射机制获取到该注解的基本信息。</li>
+<li>  RetentionPolicy.SOURCE：表明注解只在源码阶段有效，编译器在编译时将忽视该注解，即不会保留在编译好的class文件中。</li>
+<li>  RetentionPolicy.CLASS(<strong>默认</strong>)：表明注解不会被加载到JVM内存中，仅会在源码和Class文件中有效。</li>
+<li>  RetentionPolicy.RUNTIME：在运行期时该注解的信息也存在，即可以通过Java的反射机制获取到该注解的基本信息。</li>
 </ul>
 <h3 id="Target"><a href="#Target" class="headerlink" title="@Target"></a>@Target</h3><p>@Target可以用来约束注解可以应用的地方，常用的取值如下所示：</p>
 <ul>
-<li>ElementType.FIELD ：表明该注解可以作用在字段域。</li>
-<li>ElementType.TYPE：表明该注解可以作用在类、接口上。</li>
-<li>ElementType.METHOD：表明该注解可以作用在方法上。</li>
-<li>ElementType.PARAMETER：表明该注解可以作用在参数声明上。</li>
-<li>ElementType.CONSTRUCTOR：表明该注解可以作用在构造方法上</li>
-<li>ElementType.ANNOTATION_TYPE：表明该注解可以作用在另一个注解上。</li>
-<li>ElementType.PACKAGE ：表明该注解可以作用在包上。</li>
-<li>ElementType.LOCAL_VARIABLE：表明该注解可以作用局部变量上。</li>
+<li>  ElementType.FIELD ：表明该注解可以作用在字段域。</li>
+<li>  ElementType.TYPE：表明该注解可以作用在类、接口上。</li>
+<li>  ElementType.METHOD：表明该注解可以作用在方法上。</li>
+<li>  ElementType.PARAMETER：表明该注解可以作用在参数声明上。</li>
+<li>  ElementType.CONSTRUCTOR：表明该注解可以作用在构造方法上</li>
+<li>  ElementType.ANNOTATION_TYPE：表明该注解可以作用在另一个注解上。</li>
+<li>  ElementType.PACKAGE ：表明该注解可以作用在包上。</li>
+<li>  ElementType.LOCAL_VARIABLE：表明该注解可以作用局部变量上。</li>
 </ul>
 <h3 id="Documented"><a href="#Documented" class="headerlink" title="@Documented"></a>@Documented</h3><p>@Documented指定了注解的基本信息会出现在JavaDoc的文档中。</p>
 <h3 id="Inherited"><a href="#Inherited" class="headerlink" title="@Inherited"></a>@Inherited</h3><p>Inherited的意思是继承，但是并不表示注解可以继承，而是表示如果注解A被@Inherited修饰，那么注解A作用的类，其子类也是继承该注解A。</p>
 <h3 id="Repeatable"><a href="#Repeatable" class="headerlink" title="@Repeatable"></a>@Repeatable</h3><p>Repeatable的意思是可重复，是Java8之后引入的新特性。可以在同一个类上重复应用相同的某个注解。举个例子：</p>
 <ul>
-<li>Animal注解：接受一个动物的名字name</li>
+<li>  Animal注解：接受一个动物的名字name</li>
 </ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target(ElementType.TYPE)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="meta">@Repeatable(Animals.class)</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Animal &#123;</span><br><span class="line">    String <span class="title function_">name</span><span class="params">()</span> <span class="keyword">default</span> <span class="string">&quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target(ElementType.TYPE)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="meta">@Repeatable(Animals.class)</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Animal &#123;</span><br><span class="line">    <span class="function">String <span class="title">name</span><span class="params">()</span> <span class="keyword">default</span> &quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <ul>
-<li>注解容器：用来保存多个Animal的容器</li>
+<li>  注解容器：用来保存多个Animal的容器</li>
 </ul>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target(ElementType.TYPE)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Animals &#123;</span><br><span class="line">    Animal[] value();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <ul>
-<li>测试类</li>
+<li>  测试类</li>
 </ul>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Animal(name = &quot;cat&quot;)</span></span><br><span class="line"><span class="meta">@Animal(name = &quot;dog&quot;)</span></span><br><span class="line"><span class="meta">@Animal(name = &quot;bird&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TestDemo</span> &#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        Class&lt;TestDemo&gt; clazz = TestDemo.class;</span><br><span class="line">        <span class="comment">//1. 通过getDeclaredAnnotationsByType方法也可以获取</span></span><br><span class="line">        <span class="comment">//Animal[] annotationsByType = clazz.getDeclaredAnnotationsByType(Animal.class);</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment">//2. 通过getAnnotation无法获取到Animal注解的信息</span></span><br><span class="line">        <span class="comment">//Animal annotation = clazz.getAnnotation(Animal.class);</span></span><br><span class="line">        Animal[] annotationsByType = clazz.getAnnotationsByType(Animal.class);</span><br><span class="line">        System.out.println(annotationsByType.length);</span><br><span class="line">        <span class="keyword">for</span> (Animal animal : annotationsByType) &#123;</span><br><span class="line">            System.out.println(animal.name());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//output</span></span><br><span class="line"><span class="number">3</span></span><br><span class="line">cat</span><br><span class="line">dog</span><br><span class="line">bird</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Animal(name = &quot;cat&quot;)</span></span><br><span class="line"><span class="meta">@Animal(name = &quot;dog&quot;)</span></span><br><span class="line"><span class="meta">@Animal(name = &quot;bird&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestDemo</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Class&lt;TestDemo&gt; clazz = TestDemo.class;</span><br><span class="line">        <span class="comment">//1. 通过getDeclaredAnnotationsByType方法也可以获取</span></span><br><span class="line">        <span class="comment">//Animal[] annotationsByType = clazz.getDeclaredAnnotationsByType(Animal.class);</span></span><br><span class="line">        </span><br><span class="line">        <span class="comment">//2. 通过getAnnotation无法获取到Animal注解的信息</span></span><br><span class="line">        <span class="comment">//Animal annotation = clazz.getAnnotation(Animal.class);</span></span><br><span class="line">        Animal[] annotationsByType = clazz.getAnnotationsByType(Animal.class);</span><br><span class="line">        System.out.println(annotationsByType.length);</span><br><span class="line">        <span class="keyword">for</span> (Animal animal : annotationsByType) &#123;</span><br><span class="line">            System.out.println(animal.name());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">//output</span></span><br><span class="line"><span class="number">3</span></span><br><span class="line">cat</span><br><span class="line">dog</span><br><span class="line">bird</span><br></pre></td></tr></table></figure>
 
 <h2 id="注解属性"><a href="#注解属性" class="headerlink" title="注解属性"></a>注解属性</h2><p>注解中只有属性，没有方法，但是属性的定义是以“无参数的方法来声明的”，方法的名字就是属性的名字，方法的返回值就是属性的类型。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target(ElementType.TYPE)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="meta">@Repeatable(Animals.class)</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Animal &#123;</span><br><span class="line">    String <span class="title function_">name</span><span class="params">()</span> <span class="keyword">default</span> <span class="string">&quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Target(ElementType.TYPE)</span></span><br><span class="line"><span class="meta">@Retention(RetentionPolicy.RUNTIME)</span></span><br><span class="line"><span class="meta">@Repeatable(Animals.class)</span></span><br><span class="line"><span class="keyword">public</span> <span class="meta">@interface</span> Animal &#123;</span><br><span class="line">    <span class="function">String <span class="title">name</span><span class="params">()</span> <span class="keyword">default</span> &quot;&quot;</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>上述自定义的@Animal注解中定义了一个属性name，类型是String，默认值为空字符串。使用方式如下：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Animal(name = &quot;cat&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">TestDemo</span> &#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Animal(name = &quot;cat&quot;)</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestDemo</span> </span>&#123;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>只需要在需要的类上增加其中@Animal即可，并可以自定义name的值，如果@Animal的属性值为value，则可以省略不写。4</p>
 <h2 id="注解的原理"><a href="#注解的原理" class="headerlink" title="注解的原理"></a>注解的原理</h2><p>待补充（代理实现）</p>
@@ -430,7 +430,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-count">37</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -443,7 +443,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

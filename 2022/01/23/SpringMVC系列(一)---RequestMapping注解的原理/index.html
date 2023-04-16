@@ -269,14 +269,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span></span>
+              <span>3.7k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>NaN:aN</span>
+              <span>3 分钟</span>
             </span>
 
         </div>
@@ -321,41 +321,41 @@
 </tbody></table>
 <span id="more"></span>
 
-<p>​	在SpringBoot中，我们只需要在Controller的类和方法上增加一个@RequestMapping注解，就很容易的提供一个url匹配规则，这究竟是怎么做到的？下面我们从两个方面来分析。</p>
+<p>​    在SpringBoot中，我们只需要在Controller的类和方法上增加一个@RequestMapping注解，就很容易的提供一个url匹配规则，这究竟是怎么做到的？下面我们从两个方面来分析。</p>
 <ul>
-<li>应用启动时被@RequestMapping注解的类或者方法会被怎么处理？</li>
-<li>SpringBoot又是如何将http请求正确的路由到指定的方法上？</li>
+<li>  应用启动时被@RequestMapping注解的类或者方法会被怎么处理？</li>
+<li>  SpringBoot又是如何将http请求正确的路由到指定的方法上？</li>
 </ul>
-<h2 id="RequestMapping-—-应用启动"><a href="#RequestMapping-—-应用启动" class="headerlink" title="@RequestMapping — 应用启动"></a>@RequestMapping — 应用启动</h2><p>​	这个时候，就必须要提到SpringMVC中一个很重要的类了 – RequestMappingHandlerMapping类，这个类的作用是将我们的Controller中的方法转换为一个RequestMappingInfo类，首先我们先来看一下RequestMappingHandlerMapping的类图：</p>
+<h2 id="RequestMapping-—-应用启动"><a href="#RequestMapping-—-应用启动" class="headerlink" title="@RequestMapping — 应用启动"></a>@RequestMapping — 应用启动</h2><p>​    这个时候，就必须要提到SpringMVC中一个很重要的类了 – RequestMappingHandlerMapping类，这个类的作用是将我们的Controller中的方法转换为一个RequestMappingInfo类，首先我们先来看一下RequestMappingHandlerMapping的类图：</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123180434628.png"></p>
-<p>​	从类图中可以看到，RequestMappingHandlerMapping类实现了InitializingBean接口，这个接口是Spring管理Bean的一个生命周期，实现了这个接口的Bean，spring会在实例化后执行该Bean的afterPropertiesSet()方法。再看这个方法的源码之前，我们要先思考一个问题，RequestMappingHandlerMapping是如何交给Spring来管理的呢？</p>
-<h3 id="RMHM的注入"><a href="#RMHM的注入" class="headerlink" title="RMHM的注入"></a>RMHM的注入</h3><p>​	通过全局搜索，发现RequestMappingHandlerMapping会在类WebMvcAutoConfiguration中通过@Bean的方式注入，那WebMvcAutoConfiguration又是怎么注入的呢，其实通过这个类的名字就可以看出来了，这个类是通过SpringBoot提供的AutoConfiguration的机制注入的，这个机制今天不展开来讲，简单的说，就是SpringBoot会在启动的时候，扫描全局的spring.factories文件，并将其中的实现类注入spring容器中，如图所示：</p>
+<p>​    从类图中可以看到，RequestMappingHandlerMapping类实现了InitializingBean接口，这个接口是Spring管理Bean的一个生命周期，实现了这个接口的Bean，spring会在实例化后执行该Bean的afterPropertiesSet()方法。再看这个方法的源码之前，我们要先思考一个问题，RequestMappingHandlerMapping是如何交给Spring来管理的呢？</p>
+<h3 id="RMHM的注入"><a href="#RMHM的注入" class="headerlink" title="RMHM的注入"></a>RMHM的注入</h3><p>​    通过全局搜索，发现RequestMappingHandlerMapping会在类WebMvcAutoConfiguration中通过@Bean的方式注入，那WebMvcAutoConfiguration又是怎么注入的呢，其实通过这个类的名字就可以看出来了，这个类是通过SpringBoot提供的AutoConfiguration的机制注入的，这个机制今天不展开来讲，简单的说，就是SpringBoot会在启动的时候，扫描全局的spring.factories文件，并将其中的实现类注入spring容器中，如图所示：</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123183240651.png"></p>
-<h3 id="RMHM的初始化"><a href="#RMHM的初始化" class="headerlink" title="RMHM的初始化"></a>RMHM的初始化</h3><p>​	回到我们之前提到的afterPropertiesSet方法，我们一起来看看这个方法中做了哪些事情？</p>
+<h3 id="RMHM的初始化"><a href="#RMHM的初始化" class="headerlink" title="RMHM的初始化"></a>RMHM的初始化</h3><p>​    回到我们之前提到的afterPropertiesSet方法，我们一起来看看这个方法中做了哪些事情？</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123184544242.png"></p>
-<p>​	方法中主要是对RequestMappingInfo中配置参数的一些初始化，重点我们关注红框中的内容，可以看到其调用了super的afterPropertiesSet方法，我们继续深入查看其源码。</p>
+<p>​    方法中主要是对RequestMappingInfo中配置参数的一些初始化，重点我们关注红框中的内容，可以看到其调用了super的afterPropertiesSet方法，我们继续深入查看其源码。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123185209742.png"></p>
 <p>从上图中可以看出，super类中的afterPropertiesSet调用了initHandlerMethods，这个方法主要干了两件事：</p>
 <ul>
-<li><p>获取spring容器中的所有bean</p>
+<li><p>  获取spring容器中的所有bean</p>
 </li>
-<li><p>遍历这些bean，判断是否为isHandler()，如果为true，则执行detectHandlerMethods方法。</p>
+<li><p>  遍历这些bean，判断是否为isHandler()，如果为true，则执行detectHandlerMethods方法。</p>
 </li>
 </ul>
 <p>isHandler的判断逻辑为(类上是否有Controller或者RequestMapping注解)：</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123190959468.png"></p>
-<p>​	当检测到类上有Controller或者RequestMapping注解时，进入下面的方法，重点关注红框中的selectMethods方法。</p>
+<p>​    当检测到类上有Controller或者RequestMapping注解时，进入下面的方法，重点关注红框中的selectMethods方法。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123191213205.png"> </p>
-<p>​	MethodIntrospector.selectMethods方法的含义是：遍历指定class类中的方法，对每个方法执行inspect函数，并返回method -&gt; inspect返回值的Map集合。对于上图中detectHandlerMethods中的selectMethods，inspect的返回值为RequestMappingInfo类。</p>
-<p>​	下面我们一起来看下getMappingForMethod中的具体内容：</p>
+<p>​    MethodIntrospector.selectMethods方法的含义是：遍历指定class类中的方法，对每个方法执行inspect函数，并返回method -&gt; inspect返回值的Map集合。对于上图中detectHandlerMethods中的selectMethods，inspect的返回值为RequestMappingInfo类。</p>
+<p>​    下面我们一起来看下getMappingForMethod中的具体内容：</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193153797.png"></p>
 <p>getMappingForMethod函数分为三个步骤：</p>
 <ul>
-<li><p>将method上的RequestMapping注解封装为RequestMappingInfo</p>
+<li><p>  将method上的RequestMapping注解封装为RequestMappingInfo</p>
 </li>
-<li><p>将method所在类上的RequestMapping注解封装为RequestMappingInfo</p>
+<li><p>  将method所在类上的RequestMapping注解封装为RequestMappingInfo</p>
 </li>
-<li><p>将两个结合在一起(结合在一起是为了将url的匹配规则结合起来)</p>
+<li><p>  将两个结合在一起(结合在一起是为了将url的匹配规则结合起来)</p>
 </li>
 </ul>
 <p>我们继续看detectHandlerMethods后面的代码，可以看到，后面就是将每个method注册为HandlerMethod了。</p>
@@ -364,40 +364,40 @@
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123193843918.png"></p>
 <p>registry方法的主要步骤如下：</p>
 <ul>
-<li><p>根据类和method创建一个handlerMethod类</p>
+<li><p>   根据类和method创建一个handlerMethod类</p>
 </li>
-<li><p>将RequestMappingInfo -&gt; HandlerMethod的映射放入mappingLookup中</p>
+<li><p>  将RequestMappingInfo -&gt; HandlerMethod的映射放入mappingLookup中</p>
 </li>
-<li><p>将url -&gt; RequestMappingInfo 的映射放入urlLookup中</p>
+<li><p>  将url -&gt; RequestMappingInfo 的映射放入urlLookup中</p>
 </li>
 </ul>
 <p>至此，应用启动过程中@RequestMapping注解的类的解析过程就完成了，我们总结一下主要的步骤</p>
 <ul>
-<li><p>在RequestMappingHandlerMapping启动的过程执行afterPropertiesSet方法</p>
+<li><p>  在RequestMappingHandlerMapping启动的过程执行afterPropertiesSet方法</p>
 </li>
-<li><p>遍历容器中的所有bean，如果该bean存在@Controller或者@RequestMapping注解，则解析该bean</p>
+<li><p>  遍历容器中的所有bean，如果该bean存在@Controller或者@RequestMapping注解，则解析该bean</p>
 </li>
-<li><p>解析该bean中所有的方法，查找方法上是否有@RequestMapping注解，如果存在，则将@RequestMapping中的信息保存到RequestMappingInfo中</p>
+<li><p>  解析该bean中所有的方法，查找方法上是否有@RequestMapping注解，如果存在，则将@RequestMapping中的信息保存到RequestMappingInfo中</p>
 </li>
-<li><p>将方法返回的RequestMappingInfo和bean的RequestMappingInfo结合起来，并保存为Map&lt;Method, RequestMappingInfo&gt;集合</p>
+<li><p>  将方法返回的RequestMappingInfo和bean的RequestMappingInfo结合起来，并保存为Map&lt;Method, RequestMappingInfo&gt;集合</p>
 </li>
-<li><p>对每个method创建HandlerMethod类，并将RequestMappingInfo -&gt; HandlerMethod保存到mappingRegistry的属性mappingLookup中</p>
+<li><p>  对每个method创建HandlerMethod类，并将RequestMappingInfo -&gt; HandlerMethod保存到mappingRegistry的属性mappingLookup中</p>
 </li>
-<li><p>将url -&gt; RequestMappingInfo 的映射保存到mappingRegistry的属性urlLookup中</p>
+<li><p>  将url -&gt; RequestMappingInfo 的映射保存到mappingRegistry的属性urlLookup中</p>
 </li>
 </ul>
-<h2 id="RequestMapping-—-请求转发"><a href="#RequestMapping-—-请求转发" class="headerlink" title="@RequestMapping — 请求转发"></a>@RequestMapping — 请求转发</h2><p>​	上述部分主要讲述了，Springboot在启动的时候，RequestMappingHandlerMapping是如何解析被@RequestMapping修饰的类或者方法的，在本小节中，将带领大家了解一下http请求是如何被正确的路由到对应的方法中的。</p>
-<p>​	我们知道SpringMVC中流量转发是通过DispatcherServlet类的doService方法中的doDispatch方法实现的，下面我们一起来看下doDispatch的源码。</p>
+<h2 id="RequestMapping-—-请求转发"><a href="#RequestMapping-—-请求转发" class="headerlink" title="@RequestMapping — 请求转发"></a>@RequestMapping — 请求转发</h2><p>​    上述部分主要讲述了，Springboot在启动的时候，RequestMappingHandlerMapping是如何解析被@RequestMapping修饰的类或者方法的，在本小节中，将带领大家了解一下http请求是如何被正确的路由到对应的方法中的。</p>
+<p>​    我们知道SpringMVC中流量转发是通过DispatcherServlet类的doService方法中的doDispatch方法实现的，下面我们一起来看下doDispatch的源码。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123200238042.png"></p>
-<p>​	我们只关注doDispatch中部分相关源码。当http请求到来时，doDispatch会通过getHandler方法获取Request对应的Handler，此处的Handler就是我们自己编写的方法，所以我们只需要继续看getHandler的源码即可。</p>
+<p>​    我们只关注doDispatch中部分相关源码。当http请求到来时，doDispatch会通过getHandler方法获取Request对应的Handler，此处的Handler就是我们自己编写的方法，所以我们只需要继续看getHandler的源码即可。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201008364.png"></p>
-<p>​	getHandler函数的源码比较简单，就是通过遍历handlerMappings来获取Handler的执行链。我们从图中可以看到总共有7个handlerMappings，在前面小节中我们已经知道了RequestMappingHandlerMapping才是解析的关键，所以我们继续深入查看RequestMappingHandlerMapping中getHandler的源码。</p>
+<p>​    getHandler函数的源码比较简单，就是通过遍历handlerMappings来获取Handler的执行链。我们从图中可以看到总共有7个handlerMappings，在前面小节中我们已经知道了RequestMappingHandlerMapping才是解析的关键，所以我们继续深入查看RequestMappingHandlerMapping中getHandler的源码。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201411809.png"></p>
 <p>从图中可以看到getHandler调用了getHandlerInternal方法来获取handler，我们继续深入探索。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123201623903.png"></p>
 <p>图中红框的代码为关键代码，调用lookupHandlerMethod来获取指定lookupPath的handlerMethod，我们继续查看lookupHandlerMethod源码。</p>
 <p><img src="/2022/01/23/SpringMVC%E7%B3%BB%E5%88%97(%E4%B8%80)---RequestMapping%E6%B3%A8%E8%A7%A3%E7%9A%84%E5%8E%9F%E7%90%86/image-20220123202048571.png"></p>
-<p>​	lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章<a target="_blank" rel="noopener" href="https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/">SpringMVC系列(二)—RequestMapping中url匹配原理</a>。</p>
+<p>​    lookupHandlerMethod函数的作用就是通过给定的lookupPath，从mappingRegistry中获取HandlerMethod的最佳匹配，在我们实际的开发中，一个url可能不仅仅匹配到一个RequestMappingInfo，所以该方法会帮我们返回一个最佳的匹配。这部分的具体讲解请看文章<a target="_blank" rel="noopener" href="https://blog.linwang.tech/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/">SpringMVC系列(二)—RequestMapping中url匹配原理</a>。</p>
 
     </div>
 
@@ -499,7 +499,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-count">37</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -512,7 +512,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

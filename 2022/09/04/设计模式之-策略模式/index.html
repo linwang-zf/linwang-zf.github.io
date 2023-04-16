@@ -252,14 +252,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span></span>
+              <span>1.2k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>NaN:aN</span>
+              <span>1 分钟</span>
             </span>
 
         </div>
@@ -280,13 +280,13 @@
 <h2 id="二、结构图"><a href="#二、结构图" class="headerlink" title="二、结构图"></a>二、结构图</h2><p><img src="/2022/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/image-20220826082013840.png" alt="image-20220826082013840"></p>
 <p>策略模式包含三个部分，分别是策略的定义、创建和使用。</p>
 <ul>
-<li>策略的定义包含一个策略的接口和策略的不同实现类</li>
-<li>策略的创建一般会通过工厂类来实现，通过type来选择创建不同的策略</li>
-<li>策略的使用最常见的是在动态时根据配置来决定使用哪种策略。</li>
+<li>  策略的定义包含一个策略的接口和策略的不同实现类</li>
+<li>  策略的创建一般会通过工厂类来实现，通过type来选择创建不同的策略</li>
+<li>  策略的使用最常见的是在动态时根据配置来决定使用哪种策略。</li>
 </ul>
 <h2 id="三、场景和应用"><a href="#三、场景和应用" class="headerlink" title="三、场景和应用"></a>三、场景和应用</h2><p>需求：实现对一个文件的排序功能，文件中只包含整型数，并且，相邻的数字通过逗号来分割。</p>
 <p>思路：如果文件不大，可以将文件内容加载到内存中，然后进行排序；如果文件很大，我们无法将其一次性全部加载到内存中，那么我们就要用外部排序算法了；如果文件更大，我们为了利用cpu多核的优势，可以在外部排序算法的基础上进行优化，加入多线程并发排序的功能；如果文件非常大，则需要利用多机的处理能力，提高排序效率。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">interface</span> <span class="title class_">Sorter</span>&#123;</span><br><span class="line">    <span class="keyword">void</span> <span class="title function_">sort</span><span class="params">(String filePath)</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// QuickSort,ExternalSort,ConcurrentExternalSort...等排序算法的实现类</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">SorterFactory</span>&#123;</span><br><span class="line">	Map&lt;String,Sorter&gt; sorts = <span class="keyword">new</span> <span class="title class_">HashMap</span>&lt;&gt;();</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">public</span> Sorter <span class="title function_">getSorter</span><span class="params">(String type)</span>&#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">Demo</span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">void</span> <span class="title function_">sortFile</span><span class="params">(String filePath)</span>&#123;</span><br><span class="line">        <span class="type">File</span> <span class="variable">file</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">File</span>(filePath);</span><br><span class="line">        <span class="type">long</span> <span class="variable">size</span> <span class="operator">=</span> file.length();</span><br><span class="line">        Sorter sorter;</span><br><span class="line">        <span class="keyword">if</span>(size &lt; 6GB) sorter = SorterFactory.getSorter(<span class="string">&quot;quickSort&quot;</span>);</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(size &lt; 10GB) sorter = SorterFactory.getSorter(<span class="string">&quot;externalSort&quot;</span>);</span><br><span class="line">        ....</span><br><span class="line">        sorter.sort(filePath);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Sorter</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">sort</span><span class="params">(String filePath)</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// QuickSort,ExternalSort,ConcurrentExternalSort...等排序算法的实现类</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SorterFactory</span></span>&#123;</span><br><span class="line">	Map&lt;String,Sorter&gt; sorts = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    <span class="keyword">static</span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Sorter <span class="title">getSorter</span><span class="params">(String type)</span></span>&#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Demo</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sortFile</span><span class="params">(String filePath)</span></span>&#123;</span><br><span class="line">        File file = <span class="keyword">new</span> File(filePath);</span><br><span class="line">        <span class="keyword">long</span> size = file.length();</span><br><span class="line">        Sorter sorter;</span><br><span class="line">        <span class="keyword">if</span>(size &lt; 6GB) sorter = SorterFactory.getSorter(<span class="string">&quot;quickSort&quot;</span>);</span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(size &lt; 10GB) sorter = SorterFactory.getSorter(<span class="string">&quot;externalSort&quot;</span>);</span><br><span class="line">        ....</span><br><span class="line">        sorter.sort(filePath);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>上述代码采用策略模式来实现这个需求，涵盖了策略的定义、创建和使用三个部分。当我们添加一个新的排序算法时，是需要增加一个Sorter的实现类即可，并且需要稍微修改下SorterFactory和Demo类，如果完全不想修改这两个文件，则可以将排序算法写入配置文件或者写一个自定义的注解。排序工厂类每次扫描注解或者读取配置文件来确定有哪些排序算法，并通过反射来创建排序对象。</p>
 
@@ -390,7 +390,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-count">37</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -403,7 +403,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>

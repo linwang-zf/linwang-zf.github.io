@@ -267,14 +267,14 @@
                 <i class="fa fa-file-word-o"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span></span>
+              <span>2.3k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="fa fa-clock-o"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>NaN:aN</span>
+              <span>2 分钟</span>
             </span>
 
         </div>
@@ -321,7 +321,7 @@
 <p>此时获取到最佳的RequestMappingInfo匹配，并在mappingRegistry中查找对应的MappingRegistration。并返回其中的handleMethod。</p>
 <h2 id="模糊匹配"><a href="#模糊匹配" class="headerlink" title="模糊匹配"></a>模糊匹配</h2><h3 id="URL中的通配符为："><a href="#URL中的通配符为：" class="headerlink" title="URL中的通配符为：* ? **"></a>URL中的通配符为：* ? **</h3><p>有时候我们在开发时，url中往往并不是某个具体的字符串，而是一个模糊的通配符，用来匹配特性相同的一类url。举个例子如下：</p>
 <p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/4.png"></p>
-<p>假设我们当前http访问的路径为：“<a target="_blank" rel="noopener" href="http://localhost:7001/RequestMappingDemoController/vagueMatch%E2%80%9D">http://localhost:7001/RequestMappingDemoController/vagueMatch”</a><br>对于上述的例子，getMappingsByDirectPath函数将无法获取到&#x2F;RequestMappingDemoController&#x2F;vagueMatch对应的value值，此时将进入下面的代码中。</p>
+<p>假设我们当前http访问的路径为：“<a target="_blank" rel="noopener" href="http://localhost:7001/RequestMappingDemoController/vagueMatch%E2%80%9D">http://localhost:7001/RequestMappingDemoController/vagueMatch”</a><br>对于上述的例子，getMappingsByDirectPath函数将无法获取到/RequestMappingDemoController/vagueMatch对应的value值，此时将进入下面的代码中。</p>
 <p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/5.png"></p>
 <p>可以看到依旧是调用了addMatchingMappings函数，和精准匹配的区别仅仅在于第一个参数不同，精准匹配中第一个参数为查找到的value，而模糊匹配中传入的是整个mappingRegistry中保存的所有key值，需要遍历去查找最佳的匹配。<br>匹配的源码如下：</p>
 <p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/6.png"></p>
@@ -335,28 +335,28 @@
 </tr>
 </thead>
 <tbody><tr>
-<td>&#x2F;a&#x2F;*</td>
-<td>&#x2F;a&#x2F;b</td>
+<td>/a/*</td>
+<td>/a/b</td>
 <td>true</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;?</td>
-<td>&#x2F;a&#x2F;b</td>
+<td>/a/?</td>
+<td>/a/b</td>
 <td>true</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;**</td>
-<td>&#x2F;a&#x2F;b</td>
+<td>/a/**</td>
+<td>/a/b</td>
 <td>true</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;**</td>
-<td>&#x2F;a&#x2F;b&#x2F;c</td>
+<td>/a/**</td>
+<td>/a/b/c</td>
 <td>true</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;{param}</td>
-<td>&#x2F;a&#x2F;b</td>
+<td>/a/{param}</td>
+<td>/a/b</td>
 <td>true</td>
 </tr>
 <tr>
@@ -365,35 +365,35 @@
 <td></td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;*</td>
-<td>&#x2F;a</td>
+<td>/a/*</td>
+<td>/a</td>
 <td>false</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;*</td>
-<td>&#x2F;a&#x2F;b&#x2F;c</td>
+<td>/a/*</td>
+<td>/a/b/c</td>
 <td>false</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;?</td>
-<td>&#x2F;a</td>
+<td>/a/?</td>
+<td>/a</td>
 <td>false</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;?</td>
-<td>&#x2F;a&#x2F;b&#x2F;c</td>
+<td>/a/?</td>
+<td>/a/b/c</td>
 <td>false</td>
 </tr>
 <tr>
-<td>&#x2F;a&#x2F;{param}</td>
-<td>&#x2F;a</td>
+<td>/a/{param}</td>
+<td>/a</td>
 <td>false</td>
 </tr>
 </tbody></table>
 <h3 id="URL中的通配符包含：-param"><a href="#URL中的通配符包含：-param" class="headerlink" title="URL中的通配符包含：{param}"></a>URL中的通配符包含：{param}</h3><p>通过{param}的方式，我们可以获取url路径中的参数，那么SpringMVC又是怎么做的呢？</p>
 <p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/7.png"></p>
 <p>通过addMatchingMappings函数获取到最佳的url匹配规则后，会通过handleMatch对匹配结果Match进行处理，我们继续深入看下HandleMatch源码。</p>
-<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/10.png">	</p>
+<p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/10.png">    </p>
 <p>在handleMatch函数中，调用了extractMatchDetails函数，通过函数名我们可以了解该函数是用来提取Match详情的，我们通过源码来看下其真正的作用：</p>
 <p><img src="/2022/02/19/SpringMVC%E7%B3%BB%E5%88%97(%E4%BA%8C)---RequestMapping%E4%B8%ADUrl%E5%8C%B9%E9%85%8D%E5%8E%9F%E7%90%86/8.png"></p>
 <p>在extractMatchDetails函数中，调用了PathMatcher工具类中的extractUriTemplateVariables函数，这个函数的入参有两个，一个是url匹配规则，一个是request中的url访问路径，extractUriTemplateVariables可以从url匹配规则中提取参数名作为key，从url访问路径中提取参数值作为value，存放在Map中，并将Map暴露在Request的Attribute中，如下图。</p>
@@ -512,7 +512,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">36</span>
+          <span class="site-state-item-count">37</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -525,7 +525,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-count">14</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
