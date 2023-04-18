@@ -21,12 +21,12 @@
     var CONFIG = {"hostname":"linwang-zf.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="分布式理论CAP理论CAP 是 Consistency（一致性）、Availability（可用性）、Partition Tolerance（分区容错性） 这三个单词首字母组合。由加州大学伯克利分校的 Eric Brewer 教授在分布式计算原理研讨会（PODC）上提出，因此 CAP 定理又被称作 布鲁尔定理（Brewer’s theorem）。  一致性：所有节点访问的数据均为最新的数据副本 可">
+  <meta name="description" content="本文介绍了分布式系统中的一些理论及算法，比如如何生成分布式ID、分布式锁等。">
 <meta property="og:type" content="article">
 <meta property="og:title" content="分布式系统">
 <meta property="og:url" content="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/index.html">
 <meta property="og:site_name" content="逐风的博客">
-<meta property="og:description" content="分布式理论CAP理论CAP 是 Consistency（一致性）、Availability（可用性）、Partition Tolerance（分区容错性） 这三个单词首字母组合。由加州大学伯克利分校的 Eric Brewer 教授在分布式计算原理研讨会（PODC）上提出，因此 CAP 定理又被称作 布鲁尔定理（Brewer’s theorem）。  一致性：所有节点访问的数据均为最新的数据副本 可">
+<meta property="og:description" content="本文介绍了分布式系统中的一些理论及算法，比如如何生成分布式ID、分布式锁等。">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418200857471.png">
 <meta property="og:image" content="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418202116160.png">
@@ -39,7 +39,7 @@
 <meta property="og:image" content="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417224236696.png">
 <meta property="og:image" content="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418212120114.png">
 <meta property="article:published_time" content="2022-09-17T13:25:18.000Z">
-<meta property="article:modified_time" content="2023-04-18T13:58:46.650Z">
+<meta property="article:modified_time" content="2023-04-18T14:08:14.733Z">
 <meta property="article:author" content="Lin Wang">
 <meta property="article:tag" content="分布式">
 <meta name="twitter:card" content="summary">
@@ -236,7 +236,7 @@
                   <i class="fa fa-calendar-check-o"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-04-18 21:58:46" itemprop="dateModified" datetime="2023-04-18T21:58:46+08:00">2023-04-18</time>
+                <time title="修改时间：2023-04-18 22:08:14" itemprop="dateModified" datetime="2023-04-18T22:08:14+08:00">2023-04-18</time>
               </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -280,7 +280,12 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="分布式理论"><a href="#分布式理论" class="headerlink" title="分布式理论"></a>分布式理论</h2><h3 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a>CAP理论</h3><p><strong>CAP</strong> 是 <strong>Consistency（一致性）</strong>、<strong>Availability（可用性）</strong>、<strong>Partition Tolerance（分区容错性）</strong> 这三个单词首字母组合。由加州大学伯克利分校的 Eric Brewer 教授在分布式计算原理研讨会（PODC）上提出，因此 CAP 定理又被称作 <strong>布鲁尔定理（Brewer’s theorem）</strong>。</p>
+        <blockquote>
+<p>  本文介绍了分布式系统中的一些理论及算法，比如如何生成分布式ID、分布式锁等。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="分布式理论"><a href="#分布式理论" class="headerlink" title="分布式理论"></a>分布式理论</h2><h3 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a>CAP理论</h3><p><strong>CAP</strong> 是 <strong>Consistency（一致性）</strong>、<strong>Availability（可用性）</strong>、<strong>Partition Tolerance（分区容错性）</strong> 这三个单词首字母组合。由加州大学伯克利分校的 Eric Brewer 教授在分布式计算原理研讨会（PODC）上提出，因此 CAP 定理又被称作 <strong>布鲁尔定理（Brewer’s theorem）</strong>。</p>
 <ul>
 <li>一致性：所有节点访问的数据均为最新的数据副本</li>
 <li>可用性：非故障的节点在合理的时间范围内返回合理的响应</li>
