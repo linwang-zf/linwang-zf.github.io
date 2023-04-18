@@ -638,6 +638,220 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/myself.jpg">
+      <meta itemprop="name" content="Lin Wang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="逐风的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/" class="post-title-link" itemprop="url">分布式系统</a>
+        </h2>
+
+        <div class="post-meta">
+		  
+		  
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-09-17 21:25:18" itemprop="dateCreated datePublished" datetime="2022-09-17T21:25:18+08:00">2022-09-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-18 21:58:46" itemprop="dateModified" datetime="2023-04-18T21:58:46+08:00">2023-04-18</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E5%88%97/" itemprop="url" rel="index"><span itemprop="name">分布式系列</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>4.3k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>4 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="分布式理论"><a href="#分布式理论" class="headerlink" title="分布式理论"></a>分布式理论</h2><h3 id="CAP理论"><a href="#CAP理论" class="headerlink" title="CAP理论"></a>CAP理论</h3><p><strong>CAP</strong> 是 <strong>Consistency（一致性）</strong>、<strong>Availability（可用性）</strong>、<strong>Partition Tolerance（分区容错性）</strong> 这三个单词首字母组合。由加州大学伯克利分校的 Eric Brewer 教授在分布式计算原理研讨会（PODC）上提出，因此 CAP 定理又被称作 <strong>布鲁尔定理（Brewer’s theorem）</strong>。</p>
+<ul>
+<li>一致性：所有节点访问的数据均为最新的数据副本</li>
+<li>可用性：非故障的节点在合理的时间范围内返回合理的响应</li>
+<li>分区容错性：分布式系统出现网络分区时，仍然可以对外提供服务</li>
+</ul>
+<p> CAP理论的含义是在发生网络分区时，如果我们要继续提供服务，那么强一致性和高可用性只能2选1，这就是我们常说的CAP理论无法同时满足，最多只能满足2个。</p>
+<p>这是为什么呢？举个例子：</p>
+<p>若系统出现“分区”，系统中的某个节点在进行写操作。为了保证 C， 必须要禁止其他节点的读写操作，这就和 A 发生冲突了。如果为了保证 A，其他节点的读写操作正常的话，那就和 C 发生冲突了。</p>
+<p>因此，分布式系统理论上不可能选择 CA 架构，只能选择 CP 或者 AP 架构。比如 ZooKeeper、HBase 就是 CP 架构，Cassandra、Eureka 就是 AP 架构，Nacos 不仅支持 CP 架构也支持 AP 架构。</p>
+<p>总结：<strong>如果系统发生“分区”，我们要考虑选择 CP 还是 AP。如果系统没有发生“分区”的话，我们要思考如何保证 CA 。</strong></p>
+<h3 id="BASE理论"><a href="#BASE理论" class="headerlink" title="BASE理论"></a>BASE理论</h3><p>BASE理论是Basically Available(基本可用)，Soft State（软状态）和Eventually Consistent（最终一致性）三个短语的缩写。</p>
+<blockquote>
+<p>即使无法做到强一致性（Strong consistency），但每个应用都可以根据自身的业务特点，采用适当的方式来使系统达到最终一致性（Eventual consistency）。</p>
+</blockquote>
+<ul>
+<li><p>基本可用</p>
+<p>允许系统出现故障之后，在功能上或响应时间上有部分损失，但是系统依然基本可用</p>
+</li>
+<li><p>软状态</p>
+<p>允许系统中的数据存在中间状态，并认为该状态不影响系统的整体可用性，即允许系统在多个不同节点的数据副本存在数据延时。</p>
+</li>
+<li><p>最终一致性</p>
+<p>在达到一定的时间后，系统中的数据副本可以保持一致，达到最终一致性，不需要保证系统的实时一致性</p>
+</li>
+</ul>
+<h3 id="Gossip协议"><a href="#Gossip协议" class="headerlink" title="Gossip协议"></a>Gossip协议</h3><p>在分布式集群中，集群之间信息的交互一般有两种方式：</p>
+<ul>
+<li>集中式的散发消息，由主节点将消息共享给其他的节点</li>
+<li>发散式的散发消息，每个节点都可以发送 &amp; 接收消息</li>
+</ul>
+<p>Gossip协议就是一个发散式的算法，该协议是一种允许在分布式系统中共享状态的去中心化通信协议，通过这种通信协议，我们可以将信息传播给网络或集群中的所有成员</p>
+<p>Redis Cluster、Apache Cassandra等集群都使用到了Gossip协议来进行信息同步。</p>
+<p>Gossip协议的两种消息传播模式：</p>
+<ul>
+<li><p>反熵</p>
+<p>具体是如何反熵的呢？集群中的节点，每隔一段时间就随机选择某个其他节点，然后通过互相交换自己的所有数据来消除两者之间的差异，实现数据的最终一致性。</p>
+</li>
+<li><p>谣言传播</p>
+<p>谣言传播指的是分布式系统中的一个节点一旦有了新数据之后，就会变为活跃节点，活跃节点会周期性地联系其他节点向其发送新数据，直到所有的节点都存储了该新数据。（<strong>仅传播节点新增的数据</strong>）</p>
+</li>
+</ul>
+<h2 id="分布式ID"><a href="#分布式ID" class="headerlink" title="分布式ID"></a>分布式ID</h2><p>在日常的系统设计中，我们经常会使用ID来唯一标识一个物品、角色等。比如身份证、车牌号、订单号等等，我们可以认为这个ID就是数据的唯一标识。</p>
+<p>分布式ID就是在分布式系统中的ID，分布式ID需要我们保证多个数据节点下， ID依然时唯一的。</p>
+<p>分布式ID的特性：</p>
+<ul>
+<li>全局唯一</li>
+<li>高性能、高可用（分布式ID是分布式系统的重要部分，一定要保证性能和SLA）</li>
+<li>安全、递增等（锦上添花）</li>
+</ul>
+<p>下面介绍几种常见的生成分布式ID的算法</p>
+<h3 id="数据库"><a href="#数据库" class="headerlink" title="数据库"></a>数据库</h3><h4 id="主键自增"><a href="#主键自增" class="headerlink" title="主键自增"></a>主键自增</h4><p>通过关系型数据库的自增主键来生成唯一ID</p>
+<p>优点：这种方式实现简单，ID有序递增，存储空间也比较小</p>
+<p>缺点：存在数据库单点问题，每次获取ID需要访问一次数据库，性能不高</p>
+<h4 id="号段模式"><a href="#号段模式" class="headerlink" title="号段模式"></a>号段模式</h4><p>从数据库中批量获取ID，并存储在内存中，当ID快不够时，重新读取数据库获取ID集</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418200857471.png" alt="image-20230418200857471"></p>
+<p>优点：相比较主键自增的方式，减少了数据库的访问次数，并且ID有序递增，存储空间小</p>
+<p>缺点：ID无含义、存在安全问题</p>
+<h3 id="算法类"><a href="#算法类" class="headerlink" title="算法类"></a>算法类</h3><h4 id="UUID"><a href="#UUID" class="headerlink" title="UUID"></a>UUID</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">UUID.randomUUID()</span><br></pre></td></tr></table></figure>
+
+<p>UUID是全局唯一标识符，由32个16进制的数字组成，总共128位</p>
+<p>我们很少会使用UUID作为主键，尽管它是全局唯一的，因为它消耗的存储空间比较大</p>
+<p>优点：生成速度快，简单易用</p>
+<p>缺点：存储空间占用大，生成的ID无序。</p>
+<h4 id="雪花算法"><a href="#雪花算法" class="headerlink" title="雪花算法"></a>雪花算法</h4><p>雪花算法是 Twitter 开源的分布式 ID 生成算法。Snowflake 由 64 bit 的二进制数字组成，这 64 bit 的二进制被分成了几部分，每一部分存储的数据都有特定的含义：</p>
+<ul>
+<li><p><strong>第 0 位</strong>： 符号位（标识正负），始终为 0，没有用，不用管。</p>
+</li>
+<li><p><strong>第 1~41 位</strong> ：一共 41 位，用来表示时间戳，单位是毫秒，可以支撑 2 ^41 毫秒（约 69 年）</p>
+</li>
+<li><p><strong>第 42~52 位</strong> ：一共 10 位，一般来说，前 5 位表示机房 ID，后 5 位表示机器 ID（实际项目中可以根据实际情况调整）。这样就可以区分不同集群/机房的节点。</p>
+</li>
+<li><p><strong>第 53~64 位</strong> ：一共 12 位，用来表示序列号。 序列号为自增值，代表单台机器每毫秒能够产生的最大 ID 数(2^12 = 4096),也就是说单台机器每毫秒最多可以生成 4096 个 唯一 ID。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418202116160.png" alt="image-20230418202116160"></p>
+<p>优点：生成速度比较快、生成的 ID 有序递增</p>
+<p>缺点：可能产生重复ID的问题，强依赖服务器时钟，可能出现时钟回拨或时钟跳跃。</p>
+</li>
+</ul>
+<h3 id="框架"><a href="#框架" class="headerlink" title="框架"></a>框架</h3><h4 id="UidGenerator（百度）"><a href="#UidGenerator（百度）" class="headerlink" title="UidGenerator（百度）"></a>UidGenerator（百度）</h4><p>UidGenerator是百度开源的一款基于 Snowflake(雪花算法)的唯一 ID 生成器。</p>
+<p>不过，UidGenerator 对 Snowflake(雪花算法)进行了改进，生成的唯一 ID 组成如下。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418213437860.png" alt="image-20230418213437860"></p>
+<h4 id="Leaf（美团）"><a href="#Leaf（美团）" class="headerlink" title="Leaf（美团）"></a>Leaf（美团）</h4><p>Leaf 提供了 <strong>号段模式</strong> 和 <strong>Snowflake(雪花算法)</strong> 这两种模式来生成分布式 ID。并且，它支持双号段，还解决了雪花 ID 系统时钟回拨问题。不过，时钟问题的解决需要弱依赖于 Zookeeper 。</p>
+<p>Leaf 对原有的号段模式进行改进，增加了双号段避免获取 DB 在获取号段的时候阻塞请求获取 ID 的线程。简单来说，就是我一个号段还没用完之前，我自己就主动提前去获取下一个号段。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418213503777.png" alt="image-20230418213503777"></p>
+<h2 id="分布式锁"><a href="#分布式锁" class="headerlink" title="分布式锁"></a>分布式锁</h2><p>在单个JVM进程中，我们通常使用Synchronized、Lock、Semaphore等来实现多个线程对共享资源的互斥访问。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417212716576.png" alt="image-20230417212716576"></p>
+<p>但是，在分布式系统中，不同的服务器通常运行在不同的节点（即部署在独立的JVM进程中），那上图中的本地锁就无法实现共享资源的互斥访问了，于是就有了 分布式锁。</p>
+<p>分布式锁需要满足一下特点：</p>
+<ul>
+<li>互斥访问：资源在同一时间只能被一个进程访问</li>
+<li>可用性：获取锁、释放锁的服务需要保证一定的可用性，防止出现问题造成死锁</li>
+<li>重入锁：一个进程获取锁后，可以重复获取锁</li>
+</ul>
+<p>常见的分布式锁的实现方案有三种：</p>
+<h3 id="基于表主键唯一的特性"><a href="#基于表主键唯一的特性" class="headerlink" title="基于表主键唯一的特性"></a>基于表主键唯一的特性</h3><p>利用表主键唯一的特性，如果多个节点同时访问共享资源，那么数据库会保证相同的主键只有一个会被成功插入表中，那么我们就认为插入成功的节点获取锁成功，可以对共享资源进行访问。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417214940302.png" alt="image-20230417214940302"></p>
+<p>​    上述实现分布式锁的方法比较简单，存在一些问题：</p>
+<p>​    （1）锁的实现强依赖于数据库，数据库是一个单点，一旦数据库服务出现问题，那么会导致分布式锁不可用</p>
+<p>​    （2）没有给锁设置失效时间，如果解锁过程出现问题，那么其他节点将永远无法获取该锁</p>
+<h3 id="基于Redis实现分布式锁"><a href="#基于Redis实现分布式锁" class="headerlink" title="基于Redis实现分布式锁"></a>基于Redis实现分布式锁</h3><p>Redis实现分布式锁的原理其实和表主键唯一的类似，通过SETNX命令设置Key值（意思是当xxx不存在时设置），当我们可以设置成功时，表明节点获取锁成功，如果Key存在，那么获取锁失败。当节点需要释放锁时，直接DEL Key即可。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417220608982.png" alt="image-20230417220608982"></p>
+<p>基于Redis实现的分布式锁和表主键唯一存在同样的一个问题，就是当释放锁的逻辑未执行成功时，会导致分布式锁无法在被别的节点使用。</p>
+<p>这个问题我们可以通过给key增加一个过期时间来解决，当key过期后，将其删除掉（设置Key和指定过期时间为原子操作）。但是这样做依然会有一个问题：如果过期时间设置过短，节点还未操作完共享资源，那么分布式锁会提前失效；如果过期时间设置过长，又会出现性能问题。</p>
+<p>所以我们可以通过给Key自动续期来解决这个问题，Redis提供了一个Java语言的客户端Redisson，可以用来实现分布式锁，并实现锁的自动续期，原理也十分简单，通过在后台启动一个Watch Dog线程（看门狗机制），定时去检测节点是否还在操作共享资源，如果未结束，则更新锁的过期时间。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417223530080.png" alt="image-20230417223530080"></p>
+<p>Redisson还可以实现可重入锁，原理也比较简单，Redisson会为每个客户端分配一个唯一ID，客户端获取锁成功时，Key为锁标识，Value是一个Hash类型（其中Key是Redisson为每个客户端分配的ID，value是锁的计数器）。</p>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230417224236696.png" alt="image-20230417224236696"></p>
+<p>我们继续分析，上述的Redis存在单点问题，所以实际情况中，一般我们会采用Redis集群来保证可用性，但是在Redis集群下，存在一个问题：由于Redis集群之间的数据同步是异步执行的，当某个客户端成功获取到分布式锁后，此时锁的Key记录在Master节点，如果在数据同步至Slave节点之前，Master节点就宕机了，那么此时其他的客户端依然可以获取到分布式锁。</p>
+<p>Redis之父Antirez提出了RedLock算法来解决上述问题，原理是每次客户端在获取锁时，会依次向Redis集群中的多个实例获取锁，如果可以和半数以上的实例成功获取锁，那么才认为客户端获取锁成功。此算法保证只要Redis集群中有半数以上的节点可用，分布式锁服务就是正常的，不过不推荐使用，性能较差。</p>
+<h3 id="基于Zookeeper实现分布式锁"><a href="#基于Zookeeper实现分布式锁" class="headerlink" title="基于Zookeeper实现分布式锁"></a>基于Zookeeper实现分布式锁</h3><p>Zookeeper的分布式锁基于临时顺序节点和Watcher（事件监听器）实现的。</p>
+<p>对于每个锁，首先会创建一个持久节点lock，当客户端获取锁时，会在lock下创建一个临时的顺序节点，如果这个节点的数字是当前lock下最小的节点，则获取锁成功，如果不是，则获取锁失败，然后此时创建一个事件监听器注册在前一个节点上，等待被唤醒（不会自旋，大大降低了对cpu的性能消耗）</p>
+<p>总结一下获取锁和释放锁的步骤：</p>
+<p>获取锁</p>
+<ul>
+<li>创建临时顺序节点</li>
+<li>判断节点是否是持久节点（锁节点）下最小节点，如果是，获取锁成功，否则下一步</li>
+<li>创建一个事件监听器（节点删除监听器），并注册给前一个临时顺序节点，等待被唤醒</li>
+</ul>
+<p>释放锁</p>
+<ul>
+<li>删除对应的临时顺序节点即可，此时该节点上的事件监听器触发，唤醒别该锁阻塞的下一个客户端。</li>
+<li>如果客户端挂掉了，也没关系，临时节点的生命周期仅是客户端会话级别，当客户端挂掉后，节点会被自动删除，防止其他客户端永远无法获取锁。</li>
+</ul>
+<p><img src="/2022/09/17/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F/image-20230418212120114.png" alt="image-20230418212120114"></p>
+
+      
+    </div>
+
+    
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
     <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E4%B8%AD%E4%BB%8B%E6%A8%A1%E5%BC%8F/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -1134,106 +1348,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%A8%A1%E5%BC%8F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/myself.jpg">
-      <meta itemprop="name" content="Lin Wang">
-      <meta itemprop="description" content="">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="逐风的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%A8%A1%E5%BC%8F/" class="post-title-link" itemprop="url">设计模式之-迭代器模式</a>
-        </h2>
-
-        <div class="post-meta">
-		  
-		  
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-
-              <time title="创建时间：2022-09-04 11:29:37" itemprop="dateCreated datePublished" datetime="2022-09-04T11:29:37+08:00">2022-09-04</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-04-16 16:28:12" itemprop="dateModified" datetime="2023-04-16T16:28:12+08:00">2023-04-16</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">分类于</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Java%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E8%A1%8C%E4%B8%BA%E5%9E%8B/" itemprop="url" rel="index"><span itemprop="name">Java设计模式之行为型</span></a>
-                </span>
-            </span>
-
-          <br>
-            <span class="post-meta-item" title="本文字数">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-file-word-o"></i>
-              </span>
-                <span class="post-meta-item-text">本文字数：</span>
-              <span>5.3k</span>
-            </span>
-            <span class="post-meta-item" title="阅读时长">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-clock-o"></i>
-              </span>
-                <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>5 分钟</span>
-            </span>
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <blockquote>
-<p>本文给大家讲解行为型模式中的迭代器模式。</p>
-</blockquote>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E8%BF%AD%E4%BB%A3%E5%99%A8%E6%A8%A1%E5%BC%8F/#more" rel="contents">
-                阅读全文 &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1305,20 +1419,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">37</span>
+          <span class="site-state-item-count">38</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">9</span>
+        <span class="site-state-item-count">10</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">15</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
