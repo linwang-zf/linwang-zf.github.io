@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"linwang-zf.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="MySQL事务是MySQL系统引擎层的核心能力之一，MyISAM存储引擎是不支持事务的，后来的InnoDB才支持事务，下面就以InnoDB为例介绍下MySQL的事务。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL事务">
+<meta property="og:url" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/index.html">
+<meta property="og:site_name" content="逐风的博客">
+<meta property="og:description" content="MySQL事务是MySQL系统引擎层的核心能力之一，MyISAM存储引擎是不支持事务的，后来的InnoDB才支持事务，下面就以InnoDB为例介绍下MySQL的事务。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423191414175.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194034254.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194842180.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423200010457.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423224343046.png">
+<meta property="article:published_time" content="2022-05-19T10:15:22.000Z">
+<meta property="article:modified_time" content="2023-04-25T12:37:21.001Z">
+<meta property="article:author" content="Lin Wang">
+<meta property="article:tag" content="MySQL事务">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423191414175.png">
+
+<link rel="canonical" href="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MySQL事务 | 逐风的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">逐风的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">让优秀成为一种习惯</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/yourname" class="github-corner" title="点击查看我的github" aria-label="点击查看我的github" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/myself.jpg">
+      <meta itemprop="name" content="Lin Wang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="逐风的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL事务
+        </h1>
+
+        <div class="post-meta">
+		  
+		  
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-05-19 18:15:22" itemprop="dateCreated datePublished" datetime="2022-05-19T18:15:22+08:00">2022-05-19</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-25 20:37:21" itemprop="dateModified" datetime="2023-04-25T20:37:21+08:00">2023-04-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL%E7%B3%BB%E5%88%97/" itemprop="url" rel="index"><span itemprop="name">MySQL系列</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>3.2k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>MySQL事务是MySQL系统引擎层的核心能力之一，MyISAM存储引擎是不支持事务的，后来的InnoDB才支持事务，下面就以InnoDB为例介绍下MySQL的事务。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="事务定义"><a href="#事务定义" class="headerlink" title="事务定义"></a>事务定义</h2><p>事务是逻辑上的一组操作，要么都执行，要么都不执行。</p>
+<p>而数据库事务可以保证多个对数据库的操作（也就是 SQL 语句）构成一个逻辑上的整体。构成这个逻辑上的整体的这些数据库操作遵循：<strong>要么全部执行成功,要么全部不执行</strong> 。 </p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 开启一个事务</span></span><br><span class="line">BEGIN;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 多条 SQL 语句</span></span><br><span class="line">SQL1,SQL2...</span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment"># 提交事务</span></span></span><br><span class="line">COMMIT;</span><br></pre></td></tr></table></figure>
+
+<h2 id="事务的四大特性"><a href="#事务的四大特性" class="headerlink" title="事务的四大特性"></a>事务的四大特性</h2><p>提到事务，我们肯定会想到ACID（就和提到开发，就想到CRUD一样），其中ACID具体指：</p>
+<p>（1）原子性（Atomicity）：事务是最小的执行单位，不允许分割。事务的原子性保证要么全部执行成功，要么全部不执行</p>
+<p>（2）一致性（Consistency）：执行事务前后，数据要保证一致性。比如转账系统中，事务执行前后，转账人和收款人的总额要保持不变</p>
+<p>（3）隔离性（Isolation）：并发访问数据库时，一个事务不能被其他事务给影响，各并发事务之间应该是独立的</p>
+<p>（4）持久性（Durability）：一个事务被提交后，它对数据库的修改是持久的，即使数据库发生故障也不应该有任何的影响</p>
+<p>对于上面的四个特性来说，原子性、隔离性、持久性是手段，一致性是目标。换句话说，<strong>只有保证了事务的持久性、原子性、隔离性之后，一致性才能得到保障。</strong></p>
+<h2 id="并发事务的问题"><a href="#并发事务的问题" class="headerlink" title="并发事务的问题"></a>并发事务的问题</h2><p>当一个数据库上多个事务同时运行时，可能会造成一些问题（类似与多线程模式下访问共享资源）：</p>
+<h3 id="脏读"><a href="#脏读" class="headerlink" title="脏读"></a>脏读</h3><p>脏读指的是一个事务读到的数据是错误的，具体原因看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423191414175.png" alt="image-20230423191414175"></p>
+<p>脏读的原因是因为读取到了另一个事务还未提交的修改，之后另一个事务将本次修改回滚掉了，导致事务2出现了脏读。</p>
+<h3 id="更新丢失"><a href="#更新丢失" class="headerlink" title="更新丢失"></a>更新丢失</h3><p>当两个事务在同一时刻都在对相同的数据进行访问修改时，可能造成某个事务对数据的修改丢失</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194034254.png" alt="image-20230423194034254"></p>
+<p>图中事务1和事务2同时对T进行修改，但是可以发现事务1的修改结果被事务2覆盖。</p>
+<h3 id="不可重复读"><a href="#不可重复读" class="headerlink" title="不可重复读"></a>不可重复读</h3><p>一个事务在执行期间多次读取相同的数据，但是两次读取的数据不一致（和幻读很像，不过幻读是范围不一样，注意区分），具体可以看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194842180.png" alt="image-20230423194842180"></p>
+<p>事务2第一次读到的T为2，当第二次在读取的时候T变为了3，其原因是在两次读取的过程中，事务1对T进行了修改，导致事务2读取到了新修改的值</p>
+<h3 id="幻读"><a href="#幻读" class="headerlink" title="幻读"></a>幻读</h3><p>幻读和不可重复读很类似，不过幻读指的是两次读取的某个范围的数据不一致，具体原因看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423200010457.png" alt="image-20230423200010457"></p>
+<p>事务1在某时刻获取 T &gt; 5的结果共有10条，在第二次获取的时候，由于事务2之前往数据库里面插入了一条T = 6的数据，所以此时事务1获取 T &gt; 5的结果共有11条。两次读取的结果出现了不一致，就好像出现了幻读。</p>
+<h2 id="事务隔离级别"><a href="#事务隔离级别" class="headerlink" title="事务隔离级别"></a>事务隔离级别</h2><p>MySQL中定义了四种隔离基本，用来解决上述问题：</p>
+<ul>
+<li><p>读未提交：最低的隔离级别，允许读取并发事务尚未提交的数据，可能会导致脏读、幻读或不可重复读。</p>
+</li>
+<li><p>读已提交：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。</p>
+</li>
+<li><p>可重复读：在一个事务执行过程中，对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。</p>
+</li>
+<li><p>可串行化：最高的隔离级别，所有的事务依次逐个执行（通过加锁来实现），这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。</p>
+</li>
+</ul>
+<p>InnoDB存储引擎默认的隔离级别为可重复读。</p>
+<h3 id="隔离级别原理（MVCC）"><a href="#隔离级别原理（MVCC）" class="headerlink" title="隔离级别原理（MVCC）"></a>隔离级别原理（MVCC）</h3><ul>
+<li><p>MySQL中InnoDB存储引擎默认的隔离级别是可重复读（RR），其实就是在事务开始时创建一个视图，相当于对数据库做了一个快照，其他事务在此之后做的插入、更新操作对当前事务都是不可见的；</p>
+</li>
+<li><p>读已提交和可重复读的原理类似，区别在于读已提交是在每个SQL执行之前创建一个视图；</p>
+</li>
+</ul>
+<ul>
+<li><p>读未提交的话，由于读取的都是最新的数据，所有无需做任何操作，直接返回最新数据即可；</p>
+</li>
+<li><p>可串行化直接采用加锁的方式来避免事务的并行访问；</p>
+</li>
+</ul>
+<p>下面我们以可重复读RR为例，介绍下其实现原理：</p>
+<p>这里面根据SQL语句的形式又分为两种情况：</p>
+<p>（1）快照读：普通的select语句</p>
+<p>（2）当前读：select … lock in share mode、 select … for update、insert、update、delete</p>
+<p>对于快照读，是允许读取数据的历史版本的；但是对于当前读，必须获取数据的最新版本</p>
+<p>不同的读类型，InnoDB对可重复读的实现方式不同，对于快照读，InnoDB通过<strong>read view 和 undo log</strong> 来实现。我们先解释下这些概念。</p>
+<h4 id="Read-View（一致性读视图）"><a href="#Read-View（一致性读视图）" class="headerlink" title="Read View（一致性读视图）"></a>Read View（一致性读视图）</h4><p>我们之前说可重复读是在事务开始时创建一个视图，相当于一次快照；但是这肯定是不可能实现的，假如一个数据库100G，那如果每次做一次快照，那也太浪费存储了，所以肯定不是我们理解的快照，实际上InnoDB就是通过Read View来实现快照的。</p>
+<p>具体做法是：</p>
+<p>（1）事务启动时，InnoDB为每个事务构造一个数组，数组中保存当前时刻前，系统中所有的活跃事务的ID列表（活跃事务是还未提交的事务）</p>
+<p>（2）以当前数组的最小值为低水位min，系统中分配的最大的事务ID为高水位max，得到一个闭区间：[min, max]</p>
+<h4 id="Undo-log日志"><a href="#Undo-log日志" class="headerlink" title="Undo log日志"></a>Undo log日志</h4><p>我们在MySQL日志中其实简单介绍过undo log日志，它是用来在事务发生异常后，对事务进行回滚操作的；那么在这里undo log日志又是怎么发挥作用的呢？</p>
+<p>我们都知道在InnoDB存储引擎中，每行数据有多个版本，其实在每个版本中，还存在两个非常重要的字段，一个是TRX_ID：表示该版本对应的事务ID；另一个是ROLL_PTR：回滚指针，指向该行数据的undo log日志。</p>
+<p>所以我们会发现，通过当前版本，我们可以轻易的回到之前的所有历史版本，只需要通过回滚指针一直往前追溯即可。</p>
+<p>OK，到目前位置，Read View有了，每行数据的历史版本记录也有了，就差最后一个问题了：如何确定当前事务能看到哪个版本的数据？</p>
+<p>我们直接看下具体步骤：</p>
+<p>（1）从该行数据的最新版本开始，先查看该版本中的事务ID，如果和当前事务Id相同，表示本次修改是当前事务做的，肯定是可见的，则直接结束，否则分为三种情况：</p>
+<ul>
+<li>版本中事务ID &lt; min : 表示该版本在事务开始前已经提交，则数据对当前事务可见</li>
+<li>版本中事务ID &gt; max ：表示当前事务开始时，这个事务还没有创建呢，数据对当前事务肯定是不可见的</li>
+<li>版本中事务ID 在 [min, max]这个范围内：这个又分为两种情况，第一种是版本的事务ID在Read View维护的数组中，此时表示当前事务创建时，这个版本的数据还未提交，正在执行，所以此数据不可见；如果版本的事务ID不在Read View维护的数组中，则表示在当前事务开始时，该版本数据已经提交，所以此时数据可见。</li>
+</ul>
+<p>（2）如果版本的数据对当前事务可见，则遍历结束；如果不可见，则利用版本中的ROLL_PTR回滚指针和undo log日志来回滚到上一版本，然后继续步骤（1）的判断，直到某个版本对当前事务可见或者没有版本为止。</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423224343046.png" alt="image-20230423224343046"></p>
+<p>上图表示事务的可见性判断逻辑，和上面文字描述的一致。</p>
+<p>其实用一句话总结下：<strong>Read View视图创建之前就已经提交的版本数据一律可见，之后的版本数据（不管提没提交）一律不可见。</strong></p>
+<p>上面介绍了快照读时，InnoDB存储引擎是如何保证RR的，从上面我们看出，对于快照读来说，RR隔离级别下，不管是脏读、不可重复读还是幻读都不会发生；那么对于当前读呢，业务必须要读取最新版本的数据，此时InnoDB又如何保证RR的呢？</p>
+<p>其实方法也很简单，就是加锁，这里的锁有三种，一种是行锁（<strong>如果读的话加共享锁，如果更新的话加排他锁</strong>），一种是间隙锁（gap lock），一种是临键锁（Next-Key lock）；行锁用来保证不会出现脏读和不可重复读，间隙锁用来防止幻读。临键锁是行锁 + 间隙锁，用来锁住包括记录本身及其范围的一个锁（<strong>RR下当前读就是采用这个锁来防止幻读</strong>）。</p>
+
+    </div>
+
+    
+    
+    
+    
+      <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-heart"></i> 感谢阅读-------------</div>
+
+
+    
+
+      <footer class="post-footer">
+        
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/18/MySQL%E9%94%81/" rel="prev" title="MySQL锁">
+      <i class="fa fa-chevron-left"></i> MySQL锁
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/" rel="next" title="MySQL的高可用保证">
+      MySQL的高可用保证 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E5%AE%9A%E4%B9%89"><span class="nav-number">1.</span> <span class="nav-text">事务定义</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9B%9B%E5%A4%A7%E7%89%B9%E6%80%A7"><span class="nav-number">2.</span> <span class="nav-text">事务的四大特性</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B9%B6%E5%8F%91%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%97%AE%E9%A2%98"><span class="nav-number">3.</span> <span class="nav-text">并发事务的问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%84%8F%E8%AF%BB"><span class="nav-number">3.1.</span> <span class="nav-text">脏读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E4%B8%A2%E5%A4%B1"><span class="nav-number">3.2.</span> <span class="nav-text">更新丢失</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8D%E5%8F%AF%E9%87%8D%E5%A4%8D%E8%AF%BB"><span class="nav-number">3.3.</span> <span class="nav-text">不可重复读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B9%BB%E8%AF%BB"><span class="nav-number">3.4.</span> <span class="nav-text">幻读</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8B%E5%8A%A1%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB"><span class="nav-number">4.</span> <span class="nav-text">事务隔离级别</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%9A%94%E7%A6%BB%E7%BA%A7%E5%88%AB%E5%8E%9F%E7%90%86%EF%BC%88MVCC%EF%BC%89"><span class="nav-number">4.1.</span> <span class="nav-text">隔离级别原理（MVCC）</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Read-View%EF%BC%88%E4%B8%80%E8%87%B4%E6%80%A7%E8%AF%BB%E8%A7%86%E5%9B%BE%EF%BC%89"><span class="nav-number">4.1.1.</span> <span class="nav-text">Read View（一致性读视图）</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Undo-log%E6%97%A5%E5%BF%97"><span class="nav-number">4.1.2.</span> <span class="nav-text">Undo log日志</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin Wang"
+      src="/images/myself.jpg">
+  <p class="site-author-name" itemprop="name">Lin Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/linwang-zf" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;linwang-zf" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Lin Wang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

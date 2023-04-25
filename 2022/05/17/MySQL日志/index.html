@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"linwang-zf.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="MySQL日志是MySQL的核心功能之一，Crash-Safe、数据备份 &amp; 恢复、数据一致性等能力都是依赖日志完成的，今天就来介绍下MySQL的日志系统。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL日志">
+<meta property="og:url" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/index.html">
+<meta property="og:site_name" content="逐风的博客">
+<meta property="og:description" content="MySQL日志是MySQL的核心功能之一，Crash-Safe、数据备份 &amp; 恢复、数据一致性等能力都是依赖日志完成的，今天就来介绍下MySQL的日志系统。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422172837788.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174305732.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174822766.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422183205076.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422193916202.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422203014744.png">
+<meta property="article:published_time" content="2022-05-17T12:11:28.000Z">
+<meta property="article:modified_time" content="2023-04-25T12:37:32.948Z">
+<meta property="article:author" content="Lin Wang">
+<meta property="article:tag" content="MySQL日志">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422172837788.png">
+
+<link rel="canonical" href="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MySQL日志 | 逐风的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">逐风的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">让优秀成为一种习惯</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/yourname" class="github-corner" title="点击查看我的github" aria-label="点击查看我的github" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/05/17/MySQL%E6%97%A5%E5%BF%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/myself.jpg">
+      <meta itemprop="name" content="Lin Wang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="逐风的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL日志
+        </h1>
+
+        <div class="post-meta">
+		  
+		  
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-05-17 20:11:28" itemprop="dateCreated datePublished" datetime="2022-05-17T20:11:28+08:00">2022-05-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-25 20:37:32" itemprop="dateModified" datetime="2023-04-25T20:37:32+08:00">2023-04-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL%E7%B3%BB%E5%88%97/" itemprop="url" rel="index"><span itemprop="name">MySQL系列</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>3.8k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>3 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>MySQL日志是MySQL的核心功能之一，Crash-Safe、数据备份 &amp; 恢复、数据一致性等能力都是依赖日志完成的，今天就来介绍下MySQL的日志系统。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="日志类型"><a href="#日志类型" class="headerlink" title="日志类型"></a>日志类型</h2><p>MySQL日志有错误日志、查询日志、慢查询日志、事务日志、二进制日志等几类，当然最为重要的日志还是二进制日志binlog（归档日志）、事务日志redo log（重做日志），undo log（回滚日志）。</p>
+<p>其中binlog是MySQL自带的日志文件，是运行在Server层，而redo log日志是InnoDB存储引擎特有的日志。</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422172837788.png" alt="image-20230422172837788"></p>
+<h3 id="binlog日志"><a href="#binlog日志" class="headerlink" title="binlog日志"></a>binlog日志</h3><p>binlog是逻辑日志，记录了SQL语句的原始逻辑，类似与“某个字段的值加一”，它属于MySQL Server层，所以每个存储引擎只要涉及到数据的变化，都会记录到binlog日志中。</p>
+<h4 id="日志格式"><a href="#日志格式" class="headerlink" title="日志格式"></a>日志格式</h4><p>binlog日志有三种格式，通过binlog_format参数来指定：</p>
+<ul>
+<li>statement</li>
+<li>row</li>
+<li>mixed</li>
+</ul>
+<p>在statement模式下，binlog日志会将SQL语句的原文记录下来，如下图：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174305732.png" alt="image-20230422174305732"></p>
+<p>当备库要从主库同步数据时，只要应用binlog日志即可。但是这里有个问题，time = now()会获取系统当前时间，这样操作会导致备库和主库的数据不一致。</p>
+<p>为了解决这个问题，可以将binlog格式指定为row，这时记录的内容不再是原始的SQL值，还包含了具体的值，记录内容如下：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174822766.png" alt="image-20230422174822766"></p>
+<p>可以看到，row格式下，会记录当前的时间，并且把表所操作的数据的原始值也记录了下来（图中的@1、@2），这样就保证了主备数据的一致性。</p>
+<p>但是这种模式需要更多的存储空间来记录，比较占用空间，恢复与同步时会更消耗<code>IO</code>资源，影响执行速度。</p>
+<p>所以就有了mixed模式，MySQL会根据<strong>SQL语句是否可能引起数据的不一致</strong>来判断采用哪种格式存储语句。</p>
+<h4 id="写入进制"><a href="#写入进制" class="headerlink" title="写入进制"></a>写入进制</h4><p>上面了解了binlog的日志格式后，我们再来看下binlog日志写入磁盘的机制</p>
+<p>这里我们先介绍下为啥MySQL不直接把数据记录到磁盘中，而是要先写到日志文件中（WAL技术：write-ahead-logging），这是因为磁盘写是随机写，如果每次数据更新都直接更新到磁盘，那么IO成本、查找成本都是很高的，而日志是顺序写，速度会很快。</p>
+<p>binlog的写入进制如下：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422183205076.png" alt="image-20230422183205076"></p>
+<p>binlog日志的写入步骤如下：</p>
+<p>（1）在事务执行过程中，将SQL语句记录到binlog cache中（因为事务的binlog不能分开，一个事务不管多大，binlog需要确保一次性写入，所以系统给每个线程分配一个binlog cache缓存）</p>
+<p>（2）当事务提交时，将binlog cache的内容write到文件系统缓存page cache中</p>
+<p>（3）最终调用fsync刷入磁盘中</p>
+<p>binlog_cache_size可以控制binlog cache的大小，如果一个事务执行过程中存储的内容超过了这个值，需要暂存到磁盘中。</p>
+<p>write 和 fsync的时机可以通过sync_binlog来控制：</p>
+<ul>
+<li>当sync_binlog = 0时，每次事务提交只进行write，fsync由系统决定何时执行（这种方式下，如果MySQL突然宕机，可能造成page cache中的数据丢失）</li>
+<li>当sync_binlog = 1时，每次事务提交先write，然后立马fsync（这种方式不会造成数据丢失）</li>
+<li>当sync_binlog = N时，每次事务提交先write，累积N个事务后，执行一次fsync（同第一种方式一样，MySQL宕机时，可能造成N个事务数据的丢失）</li>
+</ul>
+<h3 id="redo-log日志"><a href="#redo-log日志" class="headerlink" title="redo log日志"></a>redo log日志</h3><p>redo log日志是InnoDB存储引擎特有的能力，正是因为redo log，才让MySQL具备了崩溃恢复的能力（Crash-safe），保证了数据的完整性。</p>
+<h4 id="日志格式-1"><a href="#日志格式-1" class="headerlink" title="日志格式"></a>日志格式</h4><p>redo log在磁盘中不止一个文件，而是几个文件共同组成一个日志文件，每个文件的大小均相同。</p>
+<p>并且redo log日志采用循环写的方式，类似与循环数组，它有两个很重要的参数：</p>
+<ul>
+<li>write_pos：当前记录的位置</li>
+<li>checkpoint：当前要擦除的位置</li>
+</ul>
+<p>[write_pos, checkpoint)之间的位置就是可以用来写新的redo log的记录。而[checkpoint, write_pos)之间的位置则是需要往表中刷数据的内容。</p>
+<p>如果write_pos追上了checkpoint，那么此时必须暂停手中的工作，清空一些redo log中的记录，让checkpoint往前走一段。</p>
+<p>其实redo log和binlog一样，还有一个作用就是降低对磁盘IO的读写次数，将磁盘的随机写改为redo log的顺序写，大大提高了数据更新的性能。</p>
+<h4 id="写入进制-1"><a href="#写入进制-1" class="headerlink" title="写入进制"></a>写入进制</h4><p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422193916202.png" alt="image-20230422193916202"></p>
+<p>MySQL为了降低磁盘IO的读写次数，会把涉及到的数据也加载到内存中，每次更新的时候直接修改缓存中的数据（buffer pool），同时在redo log cache中记录本次修改的内容。接着刷盘到磁盘中。</p>
+<p>我们总结下redo log日志的写入步骤：</p>
+<p>（1）数据更新时，将数据写入缓存buffer pool中</p>
+<p>（2）将本次更新的记录写入redo log buffer</p>
+<p>（3）调用write，将redo log buffer中的内容写入page cache中</p>
+<p>（4）调用fsync，将文件系统缓存中的内容写入redo log文件中</p>
+<p>除了上面的步骤外，InnoDB还有一个后台线程，每隔1s也会将redo log buffer的内容write到page cache中，并调用fsync（当redo log buffer的大小超过innodb_log_buffer_size的一半时，后台线程会主动刷盘）</p>
+<p>可以write和fsync的刷盘时机可以通过innodb_flush_log_at_trx_commit参数控制：</p>
+<ul>
+<li>innodb_flush_log_at_trx_commit = 0时，每次事务提交仅将数据记录到redo log buffer后就结束了，剩下的交给后台线程完成（这种方式下，如果MySQL挂了或者宕机，都可能会丢失1s的数据）</li>
+<li>innodb_flush_log_at_trx_commit = 1时，每次事务提交会调用write和fsync，将数据直接刷到redo log文件中（这种方式下事务只要提交成功了，就不会出现数据丢失的情况，如果事务执行过程中MySQL宕机了，那么日志丢失也不会有任何损失）</li>
+<li>innodb_flush_log_at_trx_commit = 2时，每次事务提交会调用write，将数据保存到page cache中，等待后台线程调用fsync刷入redo log日志（这种方式下，如果MySQL挂了，不会造成任何数据丢失，但是如果宕机，可能会丢失1s的数据）</li>
+</ul>
+<h3 id="undo-log日志"><a href="#undo-log日志" class="headerlink" title="undo log日志"></a>undo log日志</h3><p>我们知道在执行一个事务的过程中，如果发生了异常，那么该事务就会回滚，这个回滚就是通过undo log来实现的。</p>
+<p>事务在执行的过程中，所有的修改会先记录到undo log中，然后在执行相关的操作，如果执行过程中发生了异常，则直接利用undo log日志中的信息回滚数据。并且undo log会先于数据持久化到磁盘，这样就保证了即使遇到数据库突然宕机的情况，当再次启动数据库后，依然可以通过查询undo log日志来回滚之前的事务操作。</p>
+<h2 id="binlog和redo-log对比"><a href="#binlog和redo-log对比" class="headerlink" title="binlog和redo log对比"></a>binlog和redo log对比</h2><ul>
+<li>binlog是逻辑日志，redo log是物理日志</li>
+<li>binlog是顺序写，redo log是循环写</li>
+<li>binlog是归档日志，用来实现数据恢复，主从、主备的数据一致性，redo log是事务重做日志，用来实现crash-safe（崩溃恢复）（binlog保证数据的一致性，redo log保证数据的完整性）</li>
+</ul>
+<h2 id="两阶段提交"><a href="#两阶段提交" class="headerlink" title="两阶段提交"></a>两阶段提交</h2><p>binlog保证了MySQL集群架构中数据的一致性。</p>
+<p>redo log给MySQL提供了崩溃恢复的能力。</p>
+<p>那么在执行更新语句的过程中，这两个日志又是如何记录的呢，换句话说如何存储才能保证不会出现数据的不一致？这就不得不提到两阶段提交了。</p>
+<p>对于两个日志的记录，我们可以总结下面几种方式：</p>
+<ul>
+<li>先记录redo log，然后记录binlog</li>
+<li>先记录binlog，然后记录redo log</li>
+<li>先记录redo log，标记prepare，然后记录binlog，最后标记redo log为commit</li>
+</ul>
+<p>上面三种方式，我们先看第一种：</p>
+<p>假如redo log记录成功后，binlog还未记录，此时MySQL宕机了：</p>
+<blockquote>
+<p>我们以具体的例子举例：假设id=1的记录中t=2，将其更新为3</p>
+<p>SQL语句为update T set t = 3 where id = 1;</p>
+</blockquote>
+<p>假如redo log成功写入后，binlog日志写入时，发生了异常</p>
+<ul>
+<li>MySQL恢复后，主库根据redo log将t设置为3</li>
+<li>MySQL集群中的从库同步主库的binlog，由于binlog中没有这条更新语句，所以从库的t还是2，此时就造成了数据的不一致</li>
+</ul>
+<p>第二种方式binlog成功写入，redo log写入异常和上述的原理一样，也会出现数据的不一致</p>
+<p>我们来看第三种方式：</p>
+<p>redo log写完后，标记为prepare，然后写入binlog，最后将redo log标记为commit</p>
+<p>当MySQL宕机时，MySQL根据redo log的标识来确定下一步的操作：</p>
+<ul>
+<li>如果redo log为commit，表示redo log和binlog全部写入成功，则将数据更新</li>
+<li>如果redo log为prepare，然后根据事务Id去binlog中查看是否该事务已成功写入binlog，如果成功写入，则将redo log标记为commit，并将数据更新；否则回滚该事务</li>
+</ul>
+<h4 id="更新语句的操作流程（两阶段提交）"><a href="#更新语句的操作流程（两阶段提交）" class="headerlink" title="更新语句的操作流程（两阶段提交）"></a>更新语句的操作流程（两阶段提交）</h4><p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422203014744.png" alt="image-20230422203014744"></p>
+
+    </div>
+
+    
+    
+    
+    
+      <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-heart"></i> 感谢阅读-------------</div>
+
+
+    
+
+      <footer class="post-footer">
+        
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/" rel="prev" title="MySQL索引">
+      <i class="fa fa-chevron-left"></i> MySQL索引
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/18/MySQL%E9%94%81/" rel="next" title="MySQL锁">
+      MySQL锁 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E7%B1%BB%E5%9E%8B"><span class="nav-number">1.</span> <span class="nav-text">日志类型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#binlog%E6%97%A5%E5%BF%97"><span class="nav-number">1.1.</span> <span class="nav-text">binlog日志</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%A0%BC%E5%BC%8F"><span class="nav-number">1.1.1.</span> <span class="nav-text">日志格式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%99%E5%85%A5%E8%BF%9B%E5%88%B6"><span class="nav-number">1.1.2.</span> <span class="nav-text">写入进制</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#redo-log%E6%97%A5%E5%BF%97"><span class="nav-number">1.2.</span> <span class="nav-text">redo log日志</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%A0%BC%E5%BC%8F-1"><span class="nav-number">1.2.1.</span> <span class="nav-text">日志格式</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%99%E5%85%A5%E8%BF%9B%E5%88%B6-1"><span class="nav-number">1.2.2.</span> <span class="nav-text">写入进制</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#undo-log%E6%97%A5%E5%BF%97"><span class="nav-number">1.3.</span> <span class="nav-text">undo log日志</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#binlog%E5%92%8Credo-log%E5%AF%B9%E6%AF%94"><span class="nav-number">2.</span> <span class="nav-text">binlog和redo log对比</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4"><span class="nav-number">3.</span> <span class="nav-text">两阶段提交</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9B%B4%E6%96%B0%E8%AF%AD%E5%8F%A5%E7%9A%84%E6%93%8D%E4%BD%9C%E6%B5%81%E7%A8%8B%EF%BC%88%E4%B8%A4%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4%EF%BC%89"><span class="nav-number">3.0.1.</span> <span class="nav-text">更新语句的操作流程（两阶段提交）</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin Wang"
+      src="/images/myself.jpg">
+  <p class="site-author-name" itemprop="name">Lin Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/linwang-zf" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;linwang-zf" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Lin Wang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

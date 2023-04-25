@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.0.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"linwang-zf.github.io","root":"/","scheme":"Muse","version":"7.8.0","exturl":false,"sidebar":{"position":"right","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":true},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="在上一篇文章中，我们介绍了MySQL主备一致性的原理，通过binlog可以实现主库和备库的最终一致性。但是对于MySQL的高可用来说，除了最终一致性外，主备延迟也是很重要的，因为它影响了主备切换时的策略选择。   这篇文章我们就一起来看下MySQL的高可用是如何保证的？">
+<meta property="og:type" content="article">
+<meta property="og:title" content="MySQL的高可用保证">
+<meta property="og:url" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/index.html">
+<meta property="og:site_name" content="逐风的博客">
+<meta property="og:description" content="在上一篇文章中，我们介绍了MySQL主备一致性的原理，通过binlog可以实现主库和备库的最终一致性。但是对于MySQL的高可用来说，除了最终一致性外，主备延迟也是很重要的，因为它影响了主备切换时的策略选择。   这篇文章我们就一起来看下MySQL的高可用是如何保证的？">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011220724591.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011221801351.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/%E4%B8%BE%E4%B8%AA%E6%A0%97%E5%AD%90.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224602869.png">
+<meta property="og:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224619617.png">
+<meta property="article:published_time" content="2022-05-20T12:02:35.000Z">
+<meta property="article:modified_time" content="2023-04-25T12:35:13.193Z">
+<meta property="article:author" content="Lin Wang">
+<meta property="article:tag" content="MySQL的高可用保证">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011220724591.png">
+
+<link rel="canonical" href="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>MySQL的高可用保证 | 逐风的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">逐风的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">让优秀成为一种习惯</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+  <a href="https://github.com/yourname" class="github-corner" title="点击查看我的github" aria-label="点击查看我的github" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://linwang-zf.github.io/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/myself.jpg">
+      <meta itemprop="name" content="Lin Wang">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="逐风的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          MySQL的高可用保证
+        </h1>
+
+        <div class="post-meta">
+		  
+		  
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-05-20 20:02:35" itemprop="dateCreated datePublished" datetime="2022-05-20T20:02:35+08:00">2022-05-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2023-04-25 20:35:13" itemprop="dateModified" datetime="2023-04-25T20:35:13+08:00">2023-04-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/MySQL%E7%B3%BB%E5%88%97/" itemprop="url" rel="index"><span itemprop="name">MySQL系列</span></a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>2.1k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>2 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <blockquote>
+<p>  在上一篇文章中，我们介绍了MySQL主备一致性的原理，通过binlog可以实现主库和备库的最终一致性。但是对于MySQL的高可用来说，除了最终一致性外，主备延迟也是很重要的，因为它影响了主备切换时的策略选择。</p>
+<p>  这篇文章我们就一起来看下MySQL的高可用是如何保证的？</p>
+</blockquote>
+<span id="more"></span>
+
+<p>主备切换是MySQL高可用的基础。常用的切换策略有两种</p>
+<ul>
+<li>  可靠性优先策略</li>
+<li>  可用性优先策略</li>
+</ul>
+<p>在介绍两种策略之前，我们先来介绍下主备延迟是什么，以及有哪些原因可能会造成主备延迟。</p>
+<h3 id="主备延迟"><a href="#主备延迟" class="headerlink" title="主备延迟"></a>主备延迟</h3><p>主备延迟是同一个事务在备库执行完成的时间与主库执行完成的时间差值。</p>
+<p>主备同步的流程：</p>
+<ol>
+<li>  主库A执行完一个事务，并写入binlog，此时时间为T1</li>
+<li>  binlog传给备库B后，备库B执行完成，此时时间为T2</li>
+</ol>
+<p>那么T2-T1就是主备延迟的时间。</p>
+<p>在备库上可以通过<code>show slave status</code>命令查看<code>seconds_behind_master</code>参数的值，用来表示备库此时延迟的时间。</p>
+<h4 id="主备的延迟是如何造成的呢？"><a href="#主备的延迟是如何造成的呢？" class="headerlink" title="主备的延迟是如何造成的呢？"></a><strong>主备的延迟是如何造成的呢？</strong></h4><p>当主库A将binlog传递给备库B后，B会将binlog写入relay log中，这个时间其实是很快的，延迟的时间其实基本上是SQL线程执行relay log更新数据所消耗的时间。</p>
+<h4 id="有哪些场景会造成主备延迟呢？"><a href="#有哪些场景会造成主备延迟呢？" class="headerlink" title="有哪些场景会造成主备延迟呢？"></a><strong>有哪些场景会造成主备延迟呢？</strong></h4><ul>
+<li>  主库和备库机器性能不一致</li>
+<li>  备库的查询请求很多，QPS高</li>
+<li>  大事务，备库需要执行很长时间才能执行完成</li>
+<li>  备库正在进行备份等</li>
+</ul>
+<h3 id="可靠性优先策略"><a href="#可靠性优先策略" class="headerlink" title="可靠性优先策略"></a>可靠性优先策略</h3><p>可靠性优先策略会优先保证数据的一致性，所以其主备切换流程如下：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011220724591.png" alt="image-20221011220724591"></p>
+<p>从上述流程中可以发现，可靠性优先策略可能会使系统处于不可写状态，当主库A的readOnly设置为true后，一直到业务请求切换到备库B后才能恢复。所以为了减少系统不可写状态的时间，主库A在设置只读状态前需要保证主备延迟足够小，这样才能保证系统服务的可用性。不然如果在主备延迟很高的情况下就进行主备切换，那么这个不可写的时间是业务无法接受的。</p>
+<p>如果系统必须要每时每刻都提供服务，即无法忍受存在不可写状态，那么可以采用下面的策略。</p>
+<h3 id="可用性优先策略"><a href="#可用性优先策略" class="headerlink" title="可用性优先策略"></a>可用性优先策略</h3><p>可用性优先策略的流程如下所示：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011221801351.png" alt="image-20221011221801351"></p>
+<p>从图中可以看到，相比于可靠性优先策略来说，就是去掉了主备延迟的判断逻辑，直接将业务请求发送到备库B，从而保证了系统几乎没有不可用时间。</p>
+<p>但是这种策略有一个问题：可能造成数据不一致。</p>
+<p>给大家举个栗子：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/%E4%B8%BE%E4%B8%AA%E6%A0%97%E5%AD%90.png"></p>
+<p>假设现在有一张学生表student，包含主键Id（自增）、学生姓名name、学生班级class等等。初始化状态中主库A和备库B中均存在三条数据（即两个库中的student表都保存了三个学生的信息）。下面我们做如下操作：</p>
+<ul>
+<li><p>  往主库A的student表中插入一条数据：<code>insert into student(name, class) values(&#39;zhangyi&#39;,&#39;class A&#39;);</code></p>
+</li>
+<li><p>  继续往主库A的student表中插入一条数据：<code>insert into student(name, class) values(&#39;lisi&#39;,&#39;class B&#39;);</code></p>
+</li>
+</ul>
+<p>按照正常的操作流程，我们希望的过程如下图所示：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224602869.png" alt="image-20221011224602869"></p>
+<p>如果不出意外的话，也确实会按照上述的流程就行，最终达到主库A和备库B的数据一致性。</p>
+<p>但是假如出现了这个场景：在执行完第一条语句后，主备按照可用性优先策略进行了切换，此时第二条语句发送给了备库B（假设主备之间存在延迟），我们再来看看此时的流程：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224619617.png" alt="image-20221011224619617"></p>
+<p>从上图中可以发现，由于第一条语句在主库A执行，第二条语句在备库B执行，并且因为主键Id自增的缘故，导致两条数据出现了不一致，并且在主备同步完后，数据不一致的记录变为了2条。此时对于可靠性要求高的系统来说，这种情况显然是无法接受的。</p>
+<p>回想我们上一篇文章中介绍的binlog的存储格式，我们设想下：如果binlog_format=row会出现什么情况？（注：上述的流程是在binlog_format=mixed下的流程图）</p>
+<p>从上一篇文章中我们已经知道了在row格式下，binlog会保存插入语句中涉及的所有字段信息，包括主键Id（<a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/572301710">上篇文章回顾：MySQL的主备一致性原理</a>）。</p>
+<p>那么主库A的binlog中会保存（id=4,name=’zhangyi’,class=’class A’），备库B的binlog会保存（id=4,name=’lisi’,class=’class B’），当备库B在同步主库A的binlog时，由于此时已经存在主键Id=4的数据，此时备库B会抛出异常：duplicate key error。同理主库A同步备库B的binlog时也会抛出这个异常。</p>
+<p>所以，在实际情况中推荐大家使用row格式，可以尽早发现数据的不一致问题。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ul>
+<li>  在条件允许的情况下，尽量选择可靠性优先策略，除非不允许系统有不可用时间</li>
+<li>  可靠性优先策略可能出现系统完全不可用状态（比如主库A的异常掉电，此时系统处于完全不可用状态，必须等到备库B的延迟为0后才能恢复）</li>
+<li>  在保证数据可靠性的前提下，主备延迟的时间越短，出现异常情况后，服务恢复的时间就越短，可用性就越高。</li>
+</ul>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><blockquote>
+<p>  MySQL实战45讲—–第25讲 MySQL是怎么保证高可用的？</p>
+</blockquote>
+
+    </div>
+
+    
+    
+    
+    
+      <div style="text-align:center;color: #ccc;font-size:14px;">-------------本文结束 <i class="fa fa-heart"></i> 感谢阅读-------------</div>
+
+
+    
+
+      <footer class="post-footer">
+        
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/" rel="prev" title="MySQL事务">
+      <i class="fa fa-chevron-left"></i> MySQL事务
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/" rel="next" title="MySQL主备一致性原理">
+      MySQL主备一致性原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%BB%E5%A4%87%E5%BB%B6%E8%BF%9F"><span class="nav-number">1.</span> <span class="nav-text">主备延迟</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E4%B8%BB%E5%A4%87%E7%9A%84%E5%BB%B6%E8%BF%9F%E6%98%AF%E5%A6%82%E4%BD%95%E9%80%A0%E6%88%90%E7%9A%84%E5%91%A2%EF%BC%9F"><span class="nav-number">1.1.</span> <span class="nav-text">主备的延迟是如何造成的呢？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%89%E5%93%AA%E4%BA%9B%E5%9C%BA%E6%99%AF%E4%BC%9A%E9%80%A0%E6%88%90%E4%B8%BB%E5%A4%87%E5%BB%B6%E8%BF%9F%E5%91%A2%EF%BC%9F"><span class="nav-number">1.2.</span> <span class="nav-text">有哪些场景会造成主备延迟呢？</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AF%E9%9D%A0%E6%80%A7%E4%BC%98%E5%85%88%E7%AD%96%E7%95%A5"><span class="nav-number">2.</span> <span class="nav-text">可靠性优先策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%AF%E7%94%A8%E6%80%A7%E4%BC%98%E5%85%88%E7%AD%96%E7%95%A5"><span class="nav-number">3.</span> <span class="nav-text">可用性优先策略</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">4.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8F%82%E8%80%83"><span class="nav-number">5.</span> <span class="nav-text">参考</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="Lin Wang"
+      src="/images/myself.jpg">
+  <p class="site-author-name" itemprop="name">Lin Wang</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">44</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">11</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">21</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/linwang-zf" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;linwang-zf" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Lin Wang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://muse.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Muse</a> 强力驱动
+  </div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

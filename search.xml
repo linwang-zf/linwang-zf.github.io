@@ -4149,6 +4149,539 @@
       </tags>
   </entry>
   <entry>
+    <title>MySQL主备一致性原理</title>
+    <url>/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/</url>
+    <content><![CDATA[<blockquote>
+<p>  MySQL能够成为现下最流行的开源数据库，binlog功不可没，不仅可以用来归档，还可以用来做主备之间的同步。下面我们就来学习下binlog是如何做到的。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="MySQL主备架构图"><a href="#MySQL主备架构图" class="headerlink" title="MySQL主备架构图"></a>MySQL主备架构图</h2><p><img src="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/image-20221010091411206.png" alt="image-20221010091411206"></p>
+<p>状态1中，MySQL A为主库，客户端的所有读写都直接访问该数据库，MySQL B为备库，只负责同步A的更新到本地。在状态2中，MySQL B为主库，A变成了从库。</p>
+<h2 id="MySQL主备同步流程示意图"><a href="#MySQL主备同步流程示意图" class="headerlink" title="MySQL主备同步流程示意图"></a>MySQL主备同步流程示意图</h2><p><img src="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/image-20221010202839417.png" alt="image-20221010202839417"></p>
+<p>从图中可以看到，当客户端发起一个update或insert语句后，MySQL A首先会进行两阶段提交，写redo log和binlog。</p>
+<p>在A和B之间有一个长连接，A中的dump线程专门通过这个连接和B进行通信，传递事务执行成功后的binlog日志。详细的步骤如下：</p>
+<ol>
+<li>  备库B发送binlog文件名+文件的偏移地址来获取需要同步的binlog内容（此处还会包含A的ip、端口、用户名以及密码等供A来校验）</li>
+<li>  主库A校验成功后会将本地binlog日志的指定内容通过长连接发送给备库B的IO线程</li>
+<li>  备库B拿到binlog后写到本地的relay log中，称为中继日志</li>
+<li>  备库B的SQL线程从relay log中读取内容解析为SQL命令后执行</li>
+</ol>
+<p>此时，我们已经知道了MySQL主备同步的原理，通过在备库执行主库传递过来的binlog即可，那么我们就一起来探究下binlog的具体内容吧。</p>
+<h2 id="binlog文件格式"><a href="#binlog文件格式" class="headerlink" title="binlog文件格式"></a>binlog文件格式</h2><p>binlog一共有三种存储格式，分别为statement、row、mixed，其中mixed就是statement和row两种格式的混合。</p>
+<p>我们通过具体的例子来讲解binlog的文件格式，首先我们先创建一个表并初始化几条数据。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">create</span> <span class="keyword">table</span> binlog_study (</span><br><span class="line">  id <span class="type">int</span>(<span class="number">11</span>) <span class="keyword">not</span> <span class="keyword">null</span>,</span><br><span class="line">  name <span class="type">varchar</span>(<span class="number">32</span>) <span class="keyword">not</span> <span class="keyword">null</span>,</span><br><span class="line">  age tinyint <span class="keyword">not</span> <span class="keyword">null</span>,</span><br><span class="line">  <span class="keyword">primary</span> key(id),</span><br><span class="line">  key name(name),</span><br><span class="line">  key age(age)</span><br><span class="line">) engine<span class="operator">=</span>InnoDB;</span><br><span class="line"></span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> binlog_study <span class="keyword">values</span>(<span class="number">1</span>,&quot;zhangsan&quot;,<span class="number">20</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> binlog_study <span class="keyword">values</span>(<span class="number">2</span>,&quot;lisi&quot;,<span class="number">21</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> binlog_study <span class="keyword">values</span>(<span class="number">3</span>,&quot;wangwu&quot;,<span class="number">22</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> binlog_study <span class="keyword">values</span>(<span class="number">4</span>,&quot;zhaoliu&quot;,<span class="number">22</span>);</span><br><span class="line"><span class="keyword">insert</span> <span class="keyword">into</span> binlog_study <span class="keyword">values</span>(<span class="number">5</span>,&quot;chenqi&quot;,<span class="number">23</span>);</span><br></pre></td></tr></table></figure>
+
+<h3 id="statement"><a href="#statement" class="headerlink" title="statement"></a>statement</h3><p>首先设置我们MySQL的binlog格式为statement，如下</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">set</span> binlog_format<span class="operator">=</span>STATEMENT;</span><br><span class="line"></span><br><span class="line"># 查看设置是否成功</span><br><span class="line"><span class="keyword">show</span> variables <span class="keyword">like</span> <span class="string">&#x27;binlog_format%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>假设我们此时要执行一个delete语句：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">delete</span> <span class="keyword">from</span> binlog_study <span class="keyword">where</span> id <span class="operator">&gt;=</span><span class="number">3</span> <span class="keyword">and</span> age <span class="operator">&lt;</span> <span class="number">23</span> limit <span class="number">1</span>;</span><br></pre></td></tr></table></figure>
+
+<p>执行之后我们可以用下面的命令查看binlog日志的内容：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">show</span> binlog events <span class="keyword">in</span> <span class="string">&#x27;mysql-bin.000001&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p><img src="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/image-20221010205827882.png" alt="image-20221010205827882"></p>
+<p>我们一起看下上述binlog的日志内容：</p>
+<ol>
+<li>  begin 和commit表示事务的开始和结束</li>
+<li>  第三行为真正的执行语句，首先是use <code>mysql_study</code>，这个是mysql根据我们的语句自动加上去的，目的是为了不管当前线程在哪个库执行，都可以保证正确的执行mysql_study下的binlog_study表；use <code>mysql_study</code>后面跟着的就是我们刚刚执行的语句了，可以发现binlog直接将我们的SQL命令原封不动的保存了下来。</li>
+</ol>
+<p>其实上述语句采用statement格式存储是有点问题的，这是因为delete语句带limit可能导致主备数据不一致。具体原因如下：</p>
+<ol>
+<li>  上述的语句如果通过id索引来定义，那么会删除id=3这一行数据</li>
+<li>  如果通过age来定位， 那么会删除id=4这一行数据</li>
+</ol>
+<p>这样就会导致虽然是同一个语句，但由于选择的索引不一致而出现不同的执行结果，进而可能出现主备数据不一致的情况。</p>
+<p>下面我们看下binlog_format=ROW的情况。</p>
+<h3 id="row"><a href="#row" class="headerlink" title="row"></a>row</h3><p>首先我们还是先将binlog的格式设置为row，命令如下：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">set</span> binlog_format<span class="operator">=</span><span class="type">ROW</span>;</span><br><span class="line"></span><br><span class="line"># 查看设置是否成功</span><br><span class="line"><span class="keyword">show</span> variables <span class="keyword">like</span> <span class="string">&#x27;binlog_format%&#x27;</span>;</span><br></pre></td></tr></table></figure>
+
+<p>我们同样执行上述的delete语句，然后查看binlog中的内容如下：</p>
+<p><img src="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/image-20221010212214939.png" alt="image-20221010212214939"></p>
+<p>从图中可以看到， 与statement格式的binlog相比，row格式的binlog中没有了SQL原文，而是换成了Table_map和Delete_rows两条语句。</p>
+<ol>
+<li>  Table_map：表示接下来要操作的表是mysql_study.binlog_study</li>
+<li>  Delete_rows：定义了删除的行为</li>
+</ol>
+<p>我们借助mysqlbinlog来查看binlog中的详细信息，如下图所示：</p>
+<p><img src="/2022/05/21/MySQL%E4%B8%BB%E5%A4%87%E4%B8%80%E8%87%B4%E6%80%A7%E5%8E%9F%E7%90%86/image-20221010212550492.png" alt="image-20221010212550492"></p>
+<p>我们可以发现，row格式的binlog中并没有存储SQL的原文，而是直接保存了删除数据的主键ID，当binlog传入备库执行时，就只会删除主键Id=3的行了，不会在出现主备数据不一致的情况了。</p>
+<h3 id="mixed"><a href="#mixed" class="headerlink" title="mixed"></a>mixed</h3><p>我们前面说过mixed是statement和row格式的混合，那么这个格式有什么用呢？</p>
+<p>从前面我们的分析中我们可以知道statement和row的优缺点：</p>
+<ol>
+<li>  statement占用空间小，但是可能会造成主备数据不一致</li>
+<li>  row格式需要存储删除的数据内容，不仅占用空间大，而且耗费IO资源，但是不存在主备数据不一致的情况</li>
+</ol>
+<p>所以MySQL为了平衡两种格式的优缺点，取了一个折中的办法，就是mixed的格式。在该格式下，MySQL会自己判读该语句该采用何种格式来存储binlog。如果语句不会引起主备数据不一致就采用statemen 就采用row格式。</p>
+<h2 id="主备同步存在的问题"><a href="#主备同步存在的问题" class="headerlink" title="主备同步存在的问题"></a>主备同步存在的问题</h2><h3 id="循环复制问题"><a href="#循环复制问题" class="headerlink" title="循环复制问题"></a>循环复制问题</h3><p>在实际场景中，可能存在A和B为双M结果，即A和B都互为对方的备库，此时就存在一个问题：</p>
+<p>当业务在A上更新了一条语句，然后A把生成的binlog传递给B做同步，B做完同步之后生成了自己的binlog；由于A此时也是B的备库，A需要同步B的binlog来保持数据一致，那么节点A和B之间会不断的执行这个更新语句，也就是循环复制。</p>
+<p>解决的办法也很简单，大家应该也发现binlog中存在server id这个参数，图中为1918，这个数字可以唯一对应一个数据库（如果两个库server id一样，是无法设定为主备关系的）。对于A和B互为主备的这种架构，备库在更新binlog时，不要覆盖主库的server id即可。此时，主备同步的流程如下：</p>
+<ol>
+<li>  A将更新语句记录在binlog中，并记录自己库的server id</li>
+<li>  B将A传递过来的binlog同步到自己库中，并生成自己的binlog，并记录A的server id</li>
+<li>  A在同步B的binlog时，发现该事务的server id与自己的相同，则直接返回。</li>
+</ol>
+<h2 id="参考文档"><a href="#参考文档" class="headerlink" title="参考文档"></a>参考文档</h2><blockquote>
+<p>  MySQL实战45讲—–第24讲 MySQL是怎么保持主备一致的?</p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL主备一致性原理</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL的高可用保证</title>
+    <url>/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/</url>
+    <content><![CDATA[<blockquote>
+<p>  在上一篇文章中，我们介绍了MySQL主备一致性的原理，通过binlog可以实现主库和备库的最终一致性。但是对于MySQL的高可用来说，除了最终一致性外，主备延迟也是很重要的，因为它影响了主备切换时的策略选择。</p>
+<p>  这篇文章我们就一起来看下MySQL的高可用是如何保证的？</p>
+</blockquote>
+<span id="more"></span>
+
+<p>主备切换是MySQL高可用的基础。常用的切换策略有两种</p>
+<ul>
+<li>  可靠性优先策略</li>
+<li>  可用性优先策略</li>
+</ul>
+<p>在介绍两种策略之前，我们先来介绍下主备延迟是什么，以及有哪些原因可能会造成主备延迟。</p>
+<h3 id="主备延迟"><a href="#主备延迟" class="headerlink" title="主备延迟"></a>主备延迟</h3><p>主备延迟是同一个事务在备库执行完成的时间与主库执行完成的时间差值。</p>
+<p>主备同步的流程：</p>
+<ol>
+<li>  主库A执行完一个事务，并写入binlog，此时时间为T1</li>
+<li>  binlog传给备库B后，备库B执行完成，此时时间为T2</li>
+</ol>
+<p>那么T2-T1就是主备延迟的时间。</p>
+<p>在备库上可以通过<code>show slave status</code>命令查看<code>seconds_behind_master</code>参数的值，用来表示备库此时延迟的时间。</p>
+<h4 id="主备的延迟是如何造成的呢？"><a href="#主备的延迟是如何造成的呢？" class="headerlink" title="主备的延迟是如何造成的呢？"></a><strong>主备的延迟是如何造成的呢？</strong></h4><p>当主库A将binlog传递给备库B后，B会将binlog写入relay log中，这个时间其实是很快的，延迟的时间其实基本上是SQL线程执行relay log更新数据所消耗的时间。</p>
+<h4 id="有哪些场景会造成主备延迟呢？"><a href="#有哪些场景会造成主备延迟呢？" class="headerlink" title="有哪些场景会造成主备延迟呢？"></a><strong>有哪些场景会造成主备延迟呢？</strong></h4><ul>
+<li>  主库和备库机器性能不一致</li>
+<li>  备库的查询请求很多，QPS高</li>
+<li>  大事务，备库需要执行很长时间才能执行完成</li>
+<li>  备库正在进行备份等</li>
+</ul>
+<h3 id="可靠性优先策略"><a href="#可靠性优先策略" class="headerlink" title="可靠性优先策略"></a>可靠性优先策略</h3><p>可靠性优先策略会优先保证数据的一致性，所以其主备切换流程如下：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011220724591.png" alt="image-20221011220724591"></p>
+<p>从上述流程中可以发现，可靠性优先策略可能会使系统处于不可写状态，当主库A的readOnly设置为true后，一直到业务请求切换到备库B后才能恢复。所以为了减少系统不可写状态的时间，主库A在设置只读状态前需要保证主备延迟足够小，这样才能保证系统服务的可用性。不然如果在主备延迟很高的情况下就进行主备切换，那么这个不可写的时间是业务无法接受的。</p>
+<p>如果系统必须要每时每刻都提供服务，即无法忍受存在不可写状态，那么可以采用下面的策略。</p>
+<h3 id="可用性优先策略"><a href="#可用性优先策略" class="headerlink" title="可用性优先策略"></a>可用性优先策略</h3><p>可用性优先策略的流程如下所示：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011221801351.png" alt="image-20221011221801351"></p>
+<p>从图中可以看到，相比于可靠性优先策略来说，就是去掉了主备延迟的判断逻辑，直接将业务请求发送到备库B，从而保证了系统几乎没有不可用时间。</p>
+<p>但是这种策略有一个问题：可能造成数据不一致。</p>
+<p>给大家举个栗子：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/%E4%B8%BE%E4%B8%AA%E6%A0%97%E5%AD%90.png"></p>
+<p>假设现在有一张学生表student，包含主键Id（自增）、学生姓名name、学生班级class等等。初始化状态中主库A和备库B中均存在三条数据（即两个库中的student表都保存了三个学生的信息）。下面我们做如下操作：</p>
+<ul>
+<li><p>  往主库A的student表中插入一条数据：<code>insert into student(name, class) values(&#39;zhangyi&#39;,&#39;class A&#39;);</code></p>
+</li>
+<li><p>  继续往主库A的student表中插入一条数据：<code>insert into student(name, class) values(&#39;lisi&#39;,&#39;class B&#39;);</code></p>
+</li>
+</ul>
+<p>按照正常的操作流程，我们希望的过程如下图所示：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224602869.png" alt="image-20221011224602869"></p>
+<p>如果不出意外的话，也确实会按照上述的流程就行，最终达到主库A和备库B的数据一致性。</p>
+<p>但是假如出现了这个场景：在执行完第一条语句后，主备按照可用性优先策略进行了切换，此时第二条语句发送给了备库B（假设主备之间存在延迟），我们再来看看此时的流程：</p>
+<p><img src="/2022/05/20/MySQL%E7%9A%84%E9%AB%98%E5%8F%AF%E7%94%A8%E4%BF%9D%E8%AF%81/image-20221011224619617.png" alt="image-20221011224619617"></p>
+<p>从上图中可以发现，由于第一条语句在主库A执行，第二条语句在备库B执行，并且因为主键Id自增的缘故，导致两条数据出现了不一致，并且在主备同步完后，数据不一致的记录变为了2条。此时对于可靠性要求高的系统来说，这种情况显然是无法接受的。</p>
+<p>回想我们上一篇文章中介绍的binlog的存储格式，我们设想下：如果binlog_format=row会出现什么情况？（注：上述的流程是在binlog_format=mixed下的流程图）</p>
+<p>从上一篇文章中我们已经知道了在row格式下，binlog会保存插入语句中涉及的所有字段信息，包括主键Id（<a href="https://zhuanlan.zhihu.com/p/572301710">上篇文章回顾：MySQL的主备一致性原理</a>）。</p>
+<p>那么主库A的binlog中会保存（id=4,name=’zhangyi’,class=’class A’），备库B的binlog会保存（id=4,name=’lisi’,class=’class B’），当备库B在同步主库A的binlog时，由于此时已经存在主键Id=4的数据，此时备库B会抛出异常：duplicate key error。同理主库A同步备库B的binlog时也会抛出这个异常。</p>
+<p>所以，在实际情况中推荐大家使用row格式，可以尽早发现数据的不一致问题。</p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ul>
+<li>  在条件允许的情况下，尽量选择可靠性优先策略，除非不允许系统有不可用时间</li>
+<li>  可靠性优先策略可能出现系统完全不可用状态（比如主库A的异常掉电，此时系统处于完全不可用状态，必须等到备库B的延迟为0后才能恢复）</li>
+<li>  在保证数据可靠性的前提下，主备延迟的时间越短，出现异常情况后，服务恢复的时间就越短，可用性就越高。</li>
+</ul>
+<h3 id="参考"><a href="#参考" class="headerlink" title="参考"></a>参考</h3><blockquote>
+<p>  MySQL实战45讲—–第25讲 MySQL是怎么保证高可用的？</p>
+</blockquote>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL的高可用保证</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL事务</title>
+    <url>/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/</url>
+    <content><![CDATA[<blockquote>
+<p>MySQL事务是MySQL系统引擎层的核心能力之一，MyISAM存储引擎是不支持事务的，后来的InnoDB才支持事务，下面就以InnoDB为例介绍下MySQL的事务。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="事务定义"><a href="#事务定义" class="headerlink" title="事务定义"></a>事务定义</h2><p>事务是逻辑上的一组操作，要么都执行，要么都不执行。</p>
+<p>而数据库事务可以保证多个对数据库的操作（也就是 SQL 语句）构成一个逻辑上的整体。构成这个逻辑上的整体的这些数据库操作遵循：<strong>要么全部执行成功,要么全部不执行</strong> 。 </p>
+<figure class="highlight shell"><table><tr><td class="code"><pre><span class="line"><span class="meta">#</span><span class="bash"> 开启一个事务</span></span><br><span class="line">BEGIN;</span><br><span class="line"><span class="meta">#</span><span class="bash"> 多条 SQL 语句</span></span><br><span class="line">SQL1,SQL2...</span><br><span class="line"><span class="meta">#</span><span class="bash"><span class="comment"># 提交事务</span></span></span><br><span class="line">COMMIT;</span><br></pre></td></tr></table></figure>
+
+<h2 id="事务的四大特性"><a href="#事务的四大特性" class="headerlink" title="事务的四大特性"></a>事务的四大特性</h2><p>提到事务，我们肯定会想到ACID（就和提到开发，就想到CRUD一样），其中ACID具体指：</p>
+<p>（1）原子性（Atomicity）：事务是最小的执行单位，不允许分割。事务的原子性保证要么全部执行成功，要么全部不执行</p>
+<p>（2）一致性（Consistency）：执行事务前后，数据要保证一致性。比如转账系统中，事务执行前后，转账人和收款人的总额要保持不变</p>
+<p>（3）隔离性（Isolation）：并发访问数据库时，一个事务不能被其他事务给影响，各并发事务之间应该是独立的</p>
+<p>（4）持久性（Durability）：一个事务被提交后，它对数据库的修改是持久的，即使数据库发生故障也不应该有任何的影响</p>
+<p>对于上面的四个特性来说，原子性、隔离性、持久性是手段，一致性是目标。换句话说，<strong>只有保证了事务的持久性、原子性、隔离性之后，一致性才能得到保障。</strong></p>
+<h2 id="并发事务的问题"><a href="#并发事务的问题" class="headerlink" title="并发事务的问题"></a>并发事务的问题</h2><p>当一个数据库上多个事务同时运行时，可能会造成一些问题（类似与多线程模式下访问共享资源）：</p>
+<h3 id="脏读"><a href="#脏读" class="headerlink" title="脏读"></a>脏读</h3><p>脏读指的是一个事务读到的数据是错误的，具体原因看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423191414175.png" alt="image-20230423191414175"></p>
+<p>脏读的原因是因为读取到了另一个事务还未提交的修改，之后另一个事务将本次修改回滚掉了，导致事务2出现了脏读。</p>
+<h3 id="更新丢失"><a href="#更新丢失" class="headerlink" title="更新丢失"></a>更新丢失</h3><p>当两个事务在同一时刻都在对相同的数据进行访问修改时，可能造成某个事务对数据的修改丢失</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194034254.png" alt="image-20230423194034254"></p>
+<p>图中事务1和事务2同时对T进行修改，但是可以发现事务1的修改结果被事务2覆盖。</p>
+<h3 id="不可重复读"><a href="#不可重复读" class="headerlink" title="不可重复读"></a>不可重复读</h3><p>一个事务在执行期间多次读取相同的数据，但是两次读取的数据不一致（和幻读很像，不过幻读是范围不一样，注意区分），具体可以看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423194842180.png" alt="image-20230423194842180"></p>
+<p>事务2第一次读到的T为2，当第二次在读取的时候T变为了3，其原因是在两次读取的过程中，事务1对T进行了修改，导致事务2读取到了新修改的值</p>
+<h3 id="幻读"><a href="#幻读" class="headerlink" title="幻读"></a>幻读</h3><p>幻读和不可重复读很类似，不过幻读指的是两次读取的某个范围的数据不一致，具体原因看下图：</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423200010457.png" alt="image-20230423200010457"></p>
+<p>事务1在某时刻获取 T &gt; 5的结果共有10条，在第二次获取的时候，由于事务2之前往数据库里面插入了一条T = 6的数据，所以此时事务1获取 T &gt; 5的结果共有11条。两次读取的结果出现了不一致，就好像出现了幻读。</p>
+<h2 id="事务隔离级别"><a href="#事务隔离级别" class="headerlink" title="事务隔离级别"></a>事务隔离级别</h2><p>MySQL中定义了四种隔离基本，用来解决上述问题：</p>
+<ul>
+<li><p>读未提交：最低的隔离级别，允许读取并发事务尚未提交的数据，可能会导致脏读、幻读或不可重复读。</p>
+</li>
+<li><p>读已提交：允许读取并发事务已经提交的数据，可以阻止脏读，但是幻读或不可重复读仍有可能发生。</p>
+</li>
+<li><p>可重复读：在一个事务执行过程中，对同一字段的多次读取结果都是一致的，除非数据是被本身事务自己所修改，可以阻止脏读和不可重复读，但幻读仍有可能发生。</p>
+</li>
+<li><p>可串行化：最高的隔离级别，所有的事务依次逐个执行（通过加锁来实现），这样事务之间就完全不可能产生干扰，也就是说，该级别可以防止脏读、不可重复读以及幻读。</p>
+</li>
+</ul>
+<p>InnoDB存储引擎默认的隔离级别为可重复读。</p>
+<h3 id="隔离级别原理（MVCC）"><a href="#隔离级别原理（MVCC）" class="headerlink" title="隔离级别原理（MVCC）"></a>隔离级别原理（MVCC）</h3><ul>
+<li><p>MySQL中InnoDB存储引擎默认的隔离级别是可重复读（RR），其实就是在事务开始时创建一个视图，相当于对数据库做了一个快照，其他事务在此之后做的插入、更新操作对当前事务都是不可见的；</p>
+</li>
+<li><p>读已提交和可重复读的原理类似，区别在于读已提交是在每个SQL执行之前创建一个视图；</p>
+</li>
+</ul>
+<ul>
+<li><p>读未提交的话，由于读取的都是最新的数据，所有无需做任何操作，直接返回最新数据即可；</p>
+</li>
+<li><p>可串行化直接采用加锁的方式来避免事务的并行访问；</p>
+</li>
+</ul>
+<p>下面我们以可重复读RR为例，介绍下其实现原理：</p>
+<p>这里面根据SQL语句的形式又分为两种情况：</p>
+<p>（1）快照读：普通的select语句</p>
+<p>（2）当前读：select … lock in share mode、 select … for update、insert、update、delete</p>
+<p>对于快照读，是允许读取数据的历史版本的；但是对于当前读，必须获取数据的最新版本</p>
+<p>不同的读类型，InnoDB对可重复读的实现方式不同，对于快照读，InnoDB通过<strong>read view 和 undo log</strong> 来实现。我们先解释下这些概念。</p>
+<h4 id="Read-View（一致性读视图）"><a href="#Read-View（一致性读视图）" class="headerlink" title="Read View（一致性读视图）"></a>Read View（一致性读视图）</h4><p>我们之前说可重复读是在事务开始时创建一个视图，相当于一次快照；但是这肯定是不可能实现的，假如一个数据库100G，那如果每次做一次快照，那也太浪费存储了，所以肯定不是我们理解的快照，实际上InnoDB就是通过Read View来实现快照的。</p>
+<p>具体做法是：</p>
+<p>（1）事务启动时，InnoDB为每个事务构造一个数组，数组中保存当前时刻前，系统中所有的活跃事务的ID列表（活跃事务是还未提交的事务）</p>
+<p>（2）以当前数组的最小值为低水位min，系统中分配的最大的事务ID为高水位max，得到一个闭区间：[min, max]</p>
+<h4 id="Undo-log日志"><a href="#Undo-log日志" class="headerlink" title="Undo log日志"></a>Undo log日志</h4><p>我们在MySQL日志中其实简单介绍过undo log日志，它是用来在事务发生异常后，对事务进行回滚操作的；那么在这里undo log日志又是怎么发挥作用的呢？</p>
+<p>我们都知道在InnoDB存储引擎中，每行数据有多个版本，其实在每个版本中，还存在两个非常重要的字段，一个是TRX_ID：表示该版本对应的事务ID；另一个是ROLL_PTR：回滚指针，指向该行数据的undo log日志。</p>
+<p>所以我们会发现，通过当前版本，我们可以轻易的回到之前的所有历史版本，只需要通过回滚指针一直往前追溯即可。</p>
+<p>OK，到目前位置，Read View有了，每行数据的历史版本记录也有了，就差最后一个问题了：如何确定当前事务能看到哪个版本的数据？</p>
+<p>我们直接看下具体步骤：</p>
+<p>（1）从该行数据的最新版本开始，先查看该版本中的事务ID，如果和当前事务Id相同，表示本次修改是当前事务做的，肯定是可见的，则直接结束，否则分为三种情况：</p>
+<ul>
+<li>版本中事务ID &lt; min : 表示该版本在事务开始前已经提交，则数据对当前事务可见</li>
+<li>版本中事务ID &gt; max ：表示当前事务开始时，这个事务还没有创建呢，数据对当前事务肯定是不可见的</li>
+<li>版本中事务ID 在 [min, max]这个范围内：这个又分为两种情况，第一种是版本的事务ID在Read View维护的数组中，此时表示当前事务创建时，这个版本的数据还未提交，正在执行，所以此数据不可见；如果版本的事务ID不在Read View维护的数组中，则表示在当前事务开始时，该版本数据已经提交，所以此时数据可见。</li>
+</ul>
+<p>（2）如果版本的数据对当前事务可见，则遍历结束；如果不可见，则利用版本中的ROLL_PTR回滚指针和undo log日志来回滚到上一版本，然后继续步骤（1）的判断，直到某个版本对当前事务可见或者没有版本为止。</p>
+<p><img src="/2022/05/19/MySQL%E4%BA%8B%E5%8A%A1/image-20230423224343046.png" alt="image-20230423224343046"></p>
+<p>上图表示事务的可见性判断逻辑，和上面文字描述的一致。</p>
+<p>其实用一句话总结下：<strong>Read View视图创建之前就已经提交的版本数据一律可见，之后的版本数据（不管提没提交）一律不可见。</strong></p>
+<p>上面介绍了快照读时，InnoDB存储引擎是如何保证RR的，从上面我们看出，对于快照读来说，RR隔离级别下，不管是脏读、不可重复读还是幻读都不会发生；那么对于当前读呢，业务必须要读取最新版本的数据，此时InnoDB又如何保证RR的呢？</p>
+<p>其实方法也很简单，就是加锁，这里的锁有三种，一种是行锁（<strong>如果读的话加共享锁，如果更新的话加排他锁</strong>），一种是间隙锁（gap lock），一种是临键锁（Next-Key lock）；行锁用来保证不会出现脏读和不可重复读，间隙锁用来防止幻读。临键锁是行锁 + 间隙锁，用来锁住包括记录本身及其范围的一个锁（<strong>RR下当前读就是采用这个锁来防止幻读</strong>）。</p>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL事务</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL锁</title>
+    <url>/2022/05/18/MySQL%E9%94%81/</url>
+    <content><![CDATA[<blockquote>
+<p>MySQL锁是一种常见的并发事务的控制方式，通过对表、数据进行加锁、释放锁，保障了并发事务数据访问的一致性。下面对MySQL中锁的概念进行介绍。</p>
+</blockquote>
+<span id="more"></span>
+
+<p><img src="/2022/05/18/MySQL%E9%94%81/image-20230424233018091.png" alt="image-20230424233018091"></p>
+<h2 id="锁的介绍"><a href="#锁的介绍" class="headerlink" title="锁的介绍"></a>锁的介绍</h2><p>MySQL中锁按照加锁的粒度，可以分为三类：全局锁、表锁和行锁；</p>
+<p>其中全局锁是直接对整个数据库进行加锁，表锁和行锁顾名思义就是对表和行进行加锁，下面我们一个一个来介绍。</p>
+<h3 id="全局锁"><a href="#全局锁" class="headerlink" title="全局锁"></a>全局锁</h3><p>全局锁用来对整个数据库进行加锁，通过命令<code>Flush tables with read lock(FTWRL)</code>。</p>
+<p>加全局锁后，整个数据库将处于只读状态，其他线程的数据更新语句（数据的增删改）、数据定义语句（包括建表、修改表结构等）和更新类事务的提交语句将被阻塞。</p>
+<p><strong>全局锁的典型使用场景是，做全库逻辑备份。</strong></p>
+<p>但是大家一定会有疑问，我只要在可重复读的隔离级别下开启一个事务来做数据备份，不是就可以做到数据一致性了么，为什么还要加锁呢？</p>
+<p>其实原因也很简单，不是所有的表都支持事务的，MyISAM存储引擎就不支持事务，所以如果一个表的存储引擎是MyISAM，那么将无法采用事务的方式去做数据备份，那就只好采用全局锁的方式了。</p>
+<p>这也是为什么推荐大家在建表的时候尽量选择InnoDB存储引擎。</p>
+<h3 id="表级锁"><a href="#表级锁" class="headerlink" title="表级锁"></a>表级锁</h3><p>MySQL表级锁其实分为两种：一种是表锁，还有一种是元数据锁（MDL锁）</p>
+<h4 id="表锁"><a href="#表锁" class="headerlink" title="表锁"></a>表锁</h4><p>使用<code>lock tables ... read/write</code>命令对表加表锁，用<code>unlock tables</code>可以释放锁（客户端断开时也会主动释放锁）。</p>
+<p>表锁和常见的锁一样，读锁是共享的，写锁是互斥的。举个例子：当某个线程<code>lock tables t1 read, t2 write</code>时，那么其他线程仅能对<code>t1</code>读，<code>t2</code>的读写会被阻塞，并且本线程也仅能对t1进行读、t2进行读写，不能对其他表进行操作。</p>
+<p>对于不支持行锁的数据库，表锁是最常见的处理并发的方式。</p>
+<h4 id="MDL锁"><a href="#MDL锁" class="headerlink" title="MDL锁"></a>MDL锁</h4><p>MDL锁是MySQL中Server层提供的一个能力，无需客户端做任何操作，在访问一个表的时候，会自动对MDL加锁。</p>
+<p>如果语句是DML语句，那么会加MDL读锁，如果是DDL语句，那么会加MDL写锁，其中读锁共享，写锁互斥，并且当一个DDL语句由于获取MDL写锁被阻塞时，将阻塞后面的所有请求（大坑）。</p>
+<h4 id="意向锁"><a href="#意向锁" class="headerlink" title="意向锁"></a>意向锁</h4><p>除了上面的表锁和MDL锁之外，MySQL还有一个表锁，叫意向锁，也是InnoDB存储引擎实现的，无需客户端自己控制。</p>
+<p>意向锁分为两类：</p>
+<p>（1）意向共享锁（IS）：事务对表中的数据持有S锁，对数据行加共享锁前，必须获取该表的IS锁</p>
+<p>（2）意向排他锁（IX）：事务对表中的数据持有X锁，对数据行加排他锁前，必须获取该表的IX锁</p>
+<p>意向锁之前互相兼容（那TM有啥作用呀？），意向锁和表级别的锁存在互斥关系，具体关系如下：</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>IS锁</th>
+<th>IX锁</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>表级共享锁</td>
+<td>兼容</td>
+<td>互斥</td>
+</tr>
+<tr>
+<td>表级排他锁</td>
+<td>互斥</td>
+<td>互斥</td>
+</tr>
+</tbody></table>
+<p>其实还真有作用，大家可以参考下面文中的介绍</p>
+<blockquote>
+<p><a href="https://juejin.cn/post/6844903666332368909">MySQL中意向锁的作用</a></p>
+</blockquote>
+<p>总结如下：</p>
+<ul>
+<li>意向锁之间互相兼容，保证了不同事务在对数据行加 S 或者 X锁时的并发性</li>
+<li>意向锁和表级别的锁互斥，在对表<code>lock tables ... read/write</code>进行加锁时，无需扫描全表去获取是否有行锁，通过表上的意向锁即可判断加锁是否能成功。</li>
+</ul>
+<h3 id="行锁"><a href="#行锁" class="headerlink" title="行锁"></a>行锁</h3><p>行锁是InnoDB存储引擎特有的能力，是锁粒度最小的一把锁，按照锁定的方式行锁分为三类：</p>
+<p>（1）记录锁（Record Lock）：对单条记录进行加锁</p>
+<p>（2）间隙锁（Gap Lock）：锁定一个范围，不包含记录本身（前开后开区间）在RR隔离级别下生效</p>
+<p>（3）临键锁（Next-Key Lock）：记录锁 + 间隙锁，锁定一个范围，包含记录本身（前开后闭区间），可以用来解决幻读问题。</p>
+<p>按照锁的类型，行锁可以分为两类：</p>
+<p>（1）共享锁（S锁）：读锁，<code>select ... lock in share mode</code>时会对数据加S锁</p>
+<p>（2）排他锁（X锁）：写锁，<code>select ... for update</code>、<code>insert</code>、<code>update</code>以及<code>delete</code>等语句会对数据加X锁</p>
+<p>我们常见的读锁和写锁，基本都是读读不互斥、写读和写写互斥，这两个锁也不例外。</p>
+<p>在InnoDB中，加锁的基本单位是临键锁（前开后闭区间），但是在以下几种情况下，可能会出现锁降级：</p>
+<p>（1）索引上的等值查询，给唯一索引加锁时，临键锁退化为记录锁</p>
+<p>（2）索引上的等值查询，向右遍历时且最后一个值不满足遍历条件时，临键锁退化为间隙锁</p>
+<p>（2）如果查询条件是没有索引的字段，则会对整个表中所有的行以及间隙加锁（现象就是对表的所有更新语句都会被阻塞）</p>
+<h3 id="二阶段锁"><a href="#二阶段锁" class="headerlink" title="二阶段锁"></a>二阶段锁</h3><p>在InnoDB事务中，行锁是在需要的时候才加上的，但并不是不需要了就立刻释放，而是要等到事务结束时才释放。这个就是两阶段锁协议。</p>
+<p>简单点说就是在执行SQL语句时，判断是否要加行锁，一旦加上，事务结束后才会释放。</p>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL锁</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL日志</title>
+    <url>/2022/05/17/MySQL%E6%97%A5%E5%BF%97/</url>
+    <content><![CDATA[<blockquote>
+<p>MySQL日志是MySQL的核心功能之一，Crash-Safe、数据备份 &amp; 恢复、数据一致性等能力都是依赖日志完成的，今天就来介绍下MySQL的日志系统。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="日志类型"><a href="#日志类型" class="headerlink" title="日志类型"></a>日志类型</h2><p>MySQL日志有错误日志、查询日志、慢查询日志、事务日志、二进制日志等几类，当然最为重要的日志还是二进制日志binlog（归档日志）、事务日志redo log（重做日志），undo log（回滚日志）。</p>
+<p>其中binlog是MySQL自带的日志文件，是运行在Server层，而redo log日志是InnoDB存储引擎特有的日志。</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422172837788.png" alt="image-20230422172837788"></p>
+<h3 id="binlog日志"><a href="#binlog日志" class="headerlink" title="binlog日志"></a>binlog日志</h3><p>binlog是逻辑日志，记录了SQL语句的原始逻辑，类似与“某个字段的值加一”，它属于MySQL Server层，所以每个存储引擎只要涉及到数据的变化，都会记录到binlog日志中。</p>
+<h4 id="日志格式"><a href="#日志格式" class="headerlink" title="日志格式"></a>日志格式</h4><p>binlog日志有三种格式，通过binlog_format参数来指定：</p>
+<ul>
+<li>statement</li>
+<li>row</li>
+<li>mixed</li>
+</ul>
+<p>在statement模式下，binlog日志会将SQL语句的原文记录下来，如下图：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174305732.png" alt="image-20230422174305732"></p>
+<p>当备库要从主库同步数据时，只要应用binlog日志即可。但是这里有个问题，time = now()会获取系统当前时间，这样操作会导致备库和主库的数据不一致。</p>
+<p>为了解决这个问题，可以将binlog格式指定为row，这时记录的内容不再是原始的SQL值，还包含了具体的值，记录内容如下：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422174822766.png" alt="image-20230422174822766"></p>
+<p>可以看到，row格式下，会记录当前的时间，并且把表所操作的数据的原始值也记录了下来（图中的@1、@2），这样就保证了主备数据的一致性。</p>
+<p>但是这种模式需要更多的存储空间来记录，比较占用空间，恢复与同步时会更消耗<code>IO</code>资源，影响执行速度。</p>
+<p>所以就有了mixed模式，MySQL会根据<strong>SQL语句是否可能引起数据的不一致</strong>来判断采用哪种格式存储语句。</p>
+<h4 id="写入进制"><a href="#写入进制" class="headerlink" title="写入进制"></a>写入进制</h4><p>上面了解了binlog的日志格式后，我们再来看下binlog日志写入磁盘的机制</p>
+<p>这里我们先介绍下为啥MySQL不直接把数据记录到磁盘中，而是要先写到日志文件中（WAL技术：write-ahead-logging），这是因为磁盘写是随机写，如果每次数据更新都直接更新到磁盘，那么IO成本、查找成本都是很高的，而日志是顺序写，速度会很快。</p>
+<p>binlog的写入进制如下：</p>
+<p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422183205076.png" alt="image-20230422183205076"></p>
+<p>binlog日志的写入步骤如下：</p>
+<p>（1）在事务执行过程中，将SQL语句记录到binlog cache中（因为事务的binlog不能分开，一个事务不管多大，binlog需要确保一次性写入，所以系统给每个线程分配一个binlog cache缓存）</p>
+<p>（2）当事务提交时，将binlog cache的内容write到文件系统缓存page cache中</p>
+<p>（3）最终调用fsync刷入磁盘中</p>
+<p>binlog_cache_size可以控制binlog cache的大小，如果一个事务执行过程中存储的内容超过了这个值，需要暂存到磁盘中。</p>
+<p>write 和 fsync的时机可以通过sync_binlog来控制：</p>
+<ul>
+<li>当sync_binlog = 0时，每次事务提交只进行write，fsync由系统决定何时执行（这种方式下，如果MySQL突然宕机，可能造成page cache中的数据丢失）</li>
+<li>当sync_binlog = 1时，每次事务提交先write，然后立马fsync（这种方式不会造成数据丢失）</li>
+<li>当sync_binlog = N时，每次事务提交先write，累积N个事务后，执行一次fsync（同第一种方式一样，MySQL宕机时，可能造成N个事务数据的丢失）</li>
+</ul>
+<h3 id="redo-log日志"><a href="#redo-log日志" class="headerlink" title="redo log日志"></a>redo log日志</h3><p>redo log日志是InnoDB存储引擎特有的能力，正是因为redo log，才让MySQL具备了崩溃恢复的能力（Crash-safe），保证了数据的完整性。</p>
+<h4 id="日志格式-1"><a href="#日志格式-1" class="headerlink" title="日志格式"></a>日志格式</h4><p>redo log在磁盘中不止一个文件，而是几个文件共同组成一个日志文件，每个文件的大小均相同。</p>
+<p>并且redo log日志采用循环写的方式，类似与循环数组，它有两个很重要的参数：</p>
+<ul>
+<li>write_pos：当前记录的位置</li>
+<li>checkpoint：当前要擦除的位置</li>
+</ul>
+<p>[write_pos, checkpoint)之间的位置就是可以用来写新的redo log的记录。而[checkpoint, write_pos)之间的位置则是需要往表中刷数据的内容。</p>
+<p>如果write_pos追上了checkpoint，那么此时必须暂停手中的工作，清空一些redo log中的记录，让checkpoint往前走一段。</p>
+<p>其实redo log和binlog一样，还有一个作用就是降低对磁盘IO的读写次数，将磁盘的随机写改为redo log的顺序写，大大提高了数据更新的性能。</p>
+<h4 id="写入进制-1"><a href="#写入进制-1" class="headerlink" title="写入进制"></a>写入进制</h4><p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422193916202.png" alt="image-20230422193916202"></p>
+<p>MySQL为了降低磁盘IO的读写次数，会把涉及到的数据也加载到内存中，每次更新的时候直接修改缓存中的数据（buffer pool），同时在redo log cache中记录本次修改的内容。接着刷盘到磁盘中。</p>
+<p>我们总结下redo log日志的写入步骤：</p>
+<p>（1）数据更新时，将数据写入缓存buffer pool中</p>
+<p>（2）将本次更新的记录写入redo log buffer</p>
+<p>（3）调用write，将redo log buffer中的内容写入page cache中</p>
+<p>（4）调用fsync，将文件系统缓存中的内容写入redo log文件中</p>
+<p>除了上面的步骤外，InnoDB还有一个后台线程，每隔1s也会将redo log buffer的内容write到page cache中，并调用fsync（当redo log buffer的大小超过innodb_log_buffer_size的一半时，后台线程会主动刷盘）</p>
+<p>可以write和fsync的刷盘时机可以通过innodb_flush_log_at_trx_commit参数控制：</p>
+<ul>
+<li>innodb_flush_log_at_trx_commit = 0时，每次事务提交仅将数据记录到redo log buffer后就结束了，剩下的交给后台线程完成（这种方式下，如果MySQL挂了或者宕机，都可能会丢失1s的数据）</li>
+<li>innodb_flush_log_at_trx_commit = 1时，每次事务提交会调用write和fsync，将数据直接刷到redo log文件中（这种方式下事务只要提交成功了，就不会出现数据丢失的情况，如果事务执行过程中MySQL宕机了，那么日志丢失也不会有任何损失）</li>
+<li>innodb_flush_log_at_trx_commit = 2时，每次事务提交会调用write，将数据保存到page cache中，等待后台线程调用fsync刷入redo log日志（这种方式下，如果MySQL挂了，不会造成任何数据丢失，但是如果宕机，可能会丢失1s的数据）</li>
+</ul>
+<h3 id="undo-log日志"><a href="#undo-log日志" class="headerlink" title="undo log日志"></a>undo log日志</h3><p>我们知道在执行一个事务的过程中，如果发生了异常，那么该事务就会回滚，这个回滚就是通过undo log来实现的。</p>
+<p>事务在执行的过程中，所有的修改会先记录到undo log中，然后在执行相关的操作，如果执行过程中发生了异常，则直接利用undo log日志中的信息回滚数据。并且undo log会先于数据持久化到磁盘，这样就保证了即使遇到数据库突然宕机的情况，当再次启动数据库后，依然可以通过查询undo log日志来回滚之前的事务操作。</p>
+<h2 id="binlog和redo-log对比"><a href="#binlog和redo-log对比" class="headerlink" title="binlog和redo log对比"></a>binlog和redo log对比</h2><ul>
+<li>binlog是逻辑日志，redo log是物理日志</li>
+<li>binlog是顺序写，redo log是循环写</li>
+<li>binlog是归档日志，用来实现数据恢复，主从、主备的数据一致性，redo log是事务重做日志，用来实现crash-safe（崩溃恢复）（binlog保证数据的一致性，redo log保证数据的完整性）</li>
+</ul>
+<h2 id="两阶段提交"><a href="#两阶段提交" class="headerlink" title="两阶段提交"></a>两阶段提交</h2><p>binlog保证了MySQL集群架构中数据的一致性。</p>
+<p>redo log给MySQL提供了崩溃恢复的能力。</p>
+<p>那么在执行更新语句的过程中，这两个日志又是如何记录的呢，换句话说如何存储才能保证不会出现数据的不一致？这就不得不提到两阶段提交了。</p>
+<p>对于两个日志的记录，我们可以总结下面几种方式：</p>
+<ul>
+<li>先记录redo log，然后记录binlog</li>
+<li>先记录binlog，然后记录redo log</li>
+<li>先记录redo log，标记prepare，然后记录binlog，最后标记redo log为commit</li>
+</ul>
+<p>上面三种方式，我们先看第一种：</p>
+<p>假如redo log记录成功后，binlog还未记录，此时MySQL宕机了：</p>
+<blockquote>
+<p>我们以具体的例子举例：假设id=1的记录中t=2，将其更新为3</p>
+<p>SQL语句为update T set t = 3 where id = 1;</p>
+</blockquote>
+<p>假如redo log成功写入后，binlog日志写入时，发生了异常</p>
+<ul>
+<li>MySQL恢复后，主库根据redo log将t设置为3</li>
+<li>MySQL集群中的从库同步主库的binlog，由于binlog中没有这条更新语句，所以从库的t还是2，此时就造成了数据的不一致</li>
+</ul>
+<p>第二种方式binlog成功写入，redo log写入异常和上述的原理一样，也会出现数据的不一致</p>
+<p>我们来看第三种方式：</p>
+<p>redo log写完后，标记为prepare，然后写入binlog，最后将redo log标记为commit</p>
+<p>当MySQL宕机时，MySQL根据redo log的标识来确定下一步的操作：</p>
+<ul>
+<li>如果redo log为commit，表示redo log和binlog全部写入成功，则将数据更新</li>
+<li>如果redo log为prepare，然后根据事务Id去binlog中查看是否该事务已成功写入binlog，如果成功写入，则将redo log标记为commit，并将数据更新；否则回滚该事务</li>
+</ul>
+<h4 id="更新语句的操作流程（两阶段提交）"><a href="#更新语句的操作流程（两阶段提交）" class="headerlink" title="更新语句的操作流程（两阶段提交）"></a>更新语句的操作流程（两阶段提交）</h4><p><img src="/2022/05/17/MySQL%E6%97%A5%E5%BF%97/image-20230422203014744.png" alt="image-20230422203014744"></p>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL日志</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>MySQL索引</title>
+    <url>/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/</url>
+    <content><![CDATA[<blockquote>
+<p>MySQL索引是MySQL中非常重要的一个知识点，不仅在面试中会被经常问道，而且是我们优化SQL语句，提高SQL性能常见的一种手段。</p>
+</blockquote>
+<span id="more"></span>
+
+<h2 id="索引介绍"><a href="#索引介绍" class="headerlink" title="索引介绍"></a>索引介绍</h2><p>索引本质上是一个排序后的数据结构，可以用来快速查询数据。</p>
+<p>我们都知道MySQL底层采用B+树来实现索引，那为什么要用B+树，而不是采用其他的比如：Hash表等数据结构呢，下面我们就一起来分析一下：</p>
+<h3 id="Hash表"><a href="#Hash表" class="headerlink" title="Hash表"></a>Hash表</h3><p>Hash表采用Key-Value的形式来保存数据，底层通常采用一个数组来实现，通过计算Key的Hash值来确定数组的下标，数组下标处对应的值为Value。如果出现Hash值冲突的情况，可以采用拉链法解决（HashMap就是采用这种数据结构来保存数据，这里不展开描述啦）。</p>
+<p><img src="/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/image-20230422103621817.png" alt="image-20230422103621817"></p>
+<p>从图中可以看出，Hash表在绝大部分情况下获取数据的时间复杂度都是O(1)，那这么来看感觉MySQL应该采用Hash表才对。</p>
+<p>我们不妨在仔细想想，假如现在我们想要获取[100, 500]之间的数据，那么会发生什么情况呢？</p>
+<p>在Hash表中你需要遍历所有的数据，然后看是否在[100，500]之间，才能找到满足要求的所有数据；对于数据库来说，范围查询和等值查询都是我们非常频繁的查询语句，所以如果索引采用Hash表来存储，那么范围查询将只能进行全量扫描，没有起到索引的效果。</p>
+<h3 id="数组"><a href="#数组" class="headerlink" title="数组"></a>数组</h3><p>有序数组在范围查询和等值查询中都有很好的性能表现，那为什么MySQL索引没有采用有序数组，这是因为对排好序的数组插入一个元素，我们需要移动后面的所有元素，当数据很多的时候，性能会很差。</p>
+<p>那就没有在范围查询、等值查询、插入、删除时，表现都很好的数据结构么？嘿嘿，还真的有，这就是我们下面要介绍的B+树</p>
+<h3 id="B树-amp-B-树"><a href="#B树-amp-B-树" class="headerlink" title="B树 &amp; B+树"></a>B树 &amp; B+树</h3><p>B树又叫多路平衡查找树，我们可以把它理解为多叉的平衡搜索树，那B树和B+树又有什么区别呢？</p>
+<p>（1）B树的非叶子节点保存Key和Value值，B+树的非叶子节点仅保存Key，叶子节点保存Value值（即B+树的搜索更稳定，每次都会到叶子节点）</p>
+<p>（2）B树的叶子节点之间是独立的，和二叉树一样，而B+树叶子节点有一条引用链指向其相邻的叶子节点（支持范围查询）</p>
+<p><img src="/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/image-20230422131150221.png" alt="image-20230422131150221"></p>
+<p>首先我们来分析下为什么采用多叉树而不是而二叉树，这就因为假如我们要存储100万条数据，采用二叉树的话，树的高度大约在20层左右，我们知道文件系统的存储方式是数据块（对于树来讲，每个节点就是一个数据块），那么对于20层的树来说，我们访问一个数据需要访问20次数据块，在传统的机械硬盘下，每个数据块访问大概需要10ms，那么访问一个数据就是200ms，如果访问多个数据那么将会更长。当我们采用多叉树的方式存储时，对于InnoDB的整型类型的4字节主键索引，我们每个节点可以保存1000个关键字（即1000叉树），那么当层高为4的时候，可以存储的节点数据大概为10亿条，已经可以满足绝大部分场景了。</p>
+<p>所以MySQL采用B+树作为索引的数据结构，除了很好的查询、插入、删除的性能表现外，也有减少磁盘的访问次数的原因。</p>
+<p>在MySQL中，MyISAM存储引擎和InnoDB存储引擎均采用B+树作为索引结构，但是底层的存储方式有所不同：</p>
+<blockquote>
+<p>MyISAM 引擎中，B+Tree 叶节点的 data 域存放的是数据记录的地址。在索引检索的时候，首先按照 B+Tree 搜索算法搜索索引，如果指定的 Key 存在，则取出其 data 域的值，然后以 data 域的值为地址读取相应的数据记录。这被称为“<strong>非聚簇索引（非聚集索引）</strong>”。</p>
+<p>InnoDB 引擎中，其数据文件本身就是索引文件。相比 MyISAM，索引文件和数据文件是分离的，其表数据文件本身就是按 B+Tree 组织的一个索引结构，树的叶节点 data 域保存了完整的数据记录。这个索引的 key 是数据表的主键，因此 InnoDB 表数据文件本身就是主索引。这被称为“<strong>聚簇索引（聚集索引）</strong>”，而其余的索引都作为 <strong>辅助索引</strong> ，辅助索引的 data 域存储相应记录主键的值而不是地址，这也是和 MyISAM 不同的地方。在根据主索引搜索时，直接找到 key 所在的节点即可取出数据；在根据辅助索引查找时，则需要先取出主键的值，再走一遍主索引。 因此，在设计表的时候，不建议使用过长的字段作为主键，也不建议使用非单调的字段作为主键，这样会造成主索引频繁分裂。</p>
+</blockquote>
+<p><img src="/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/image-20230422153101891.png" alt="image-20230422153101891"></p>
+<h2 id="索引类型"><a href="#索引类型" class="headerlink" title="索引类型"></a>索引类型</h2><p><img src="/2022/05/15/MySQL%E7%B4%A2%E5%BC%95/image-20230422165456946.png" alt="image-20230422165456946"></p>
+<p>按照索引和数据的底层存储结构，可以将索引分为聚簇索引和非聚簇索引（上面介绍MyISAM和InnoDB存储方式不同时已经做过介绍）</p>
+<ul>
+<li><p>聚簇索引</p>
+<p>（1）叶子节点中索引和数据一起存放的索引，叫做聚簇索引，在InnoDB中，主键索引是聚簇索引（主键索引的叶子节点包含整行数据）</p>
+<p>（2）MyISAM存储引擎底层将索引和数据分为两个文件存储，所以在MyISAM中，主键索引也仅仅保存指向数据文件的指针，索引和数据没有存放在一起，所以在MyISAM中，主键索引不是聚簇索引。</p>
+</li>
+<li><p>非聚簇索引</p>
+<p>索引和数据分开存放的索引叫做非聚簇索引，二级索引就是非聚簇索引。在MyISAM中，不管是主键还是非主键，全都是非聚簇索引。</p>
+</li>
+</ul>
+<p>按照应用维度，索引可以分为下面几类：</p>
+<ul>
+<li>主键索引：表的主键上建立的索引，非空性、唯一性，用来加速查询。</li>
+<li>普通索引：在表的非主键字段上建立的普通索引，仅用来加速查询（<strong>前缀索引：</strong>是专门针对字符串类型的前几个字符创建的索引，可以降低索引的存储消耗）。</li>
+<li>唯一索引：在表的非主键字段上建立的唯一索引，唯一性，可加速查询</li>
+<li>联合索引：将表中的多列值组合在一起建立的索引，专门用于组合搜查（当查询所需的字段全部都在索引中时，此时就是<strong>覆盖索引</strong>，覆盖索引有效降低了回表次数）</li>
+<li>全文索引：对文本类型的内容进行分词，用来搜索使用，在CHAR、VARCHAR、TEXT上可以创建全文索引。</li>
+</ul>
+<p>下面我们对上面的几种索引类型进行简单的介绍</p>
+<p>聚簇索引和非聚簇索引在上面已经进行过介绍，在此不再赘述。</p>
+<h3 id="主键索引"><a href="#主键索引" class="headerlink" title="主键索引"></a>主键索引</h3><p>数据表的主键列使用的就是主键索引，一张数据表只能有一个主键，并且主键不能为 null，不能重复。</p>
+<p>在MySQL的InnoDB中，当没有显示的指定表的主键时，InnoDB 会自动先检查表中是否有唯一索引且不允许存在 null 值的字段，如果有，则选择该字段为默认的主键，否则 InnoDB 将会自动创建一个 6Byte 的自增主键。</p>
+<p>在InnoDB中，主键索引的叶子节点保存了主键所在行的完整数据。</p>
+<h3 id="二级索引"><a href="#二级索引" class="headerlink" title="二级索引"></a>二级索引</h3><p>二级索引又称为辅助索引，是因为二级索引的叶子节点存储的数据是主键。也就是说，通过二级索引，可以定位主键的位置。</p>
+<p>普通索引，唯一索引，联合索引、前缀索引等索引都属于二级索引。</p>
+<p>二级索引在查询时，首先需要查询主键的位置，然后在主键索引中在查询对应的字段（非覆盖索引的情况），即需要回表。</p>
+<h3 id="覆盖索引"><a href="#覆盖索引" class="headerlink" title="覆盖索引"></a>覆盖索引</h3><p>如果一个索引包含（或者说覆盖）所有需要查询的字段的值，我们就称之为 <strong>覆盖索引（Covering Index）</strong> 。我们知道在 InnoDB 存储引擎中，如果不是主键索引，叶子节点存储的是主键+列值。最终还是要“回表”，也就是要通过主键再查找一次，这样就会比较慢。而覆盖索引就是把要查询出的列和索引是对应的，不做回表操作！</p>
+<h3 id="联合索引"><a href="#联合索引" class="headerlink" title="联合索引"></a>联合索引</h3><p>使用表中的多个字段创建索引，就是 联合索引。</p>
+<p>联合索引中有一个最左前缀匹配原则，大概含义是：</p>
+<p>在使用联合索引时，MySQL 会根据联合索引中的字段顺序，从左到右依次到查询条件中去匹配，如果查询条件中存在与联合索引中最左侧字段相匹配的字段，则就会使用该字段过滤一批数据，直至联合索引中全部字段匹配完成，或者在执行过程中遇到范围查询（如 **<code>&gt;</code><strong>、</strong><code>&lt;</code>**）才会停止匹配。对于 <strong><code>&gt;=</code><strong>、</strong><code>&lt;=</code><strong>、</strong><code>BETWEEN</code><strong>、</strong><code>like</code></strong> 前缀匹配的范围查询，并不会停止匹配。所以，我们在使用联合索引时，可以将区分度高的字段放在最左边，这也可以过滤更多数据。</p>
+<blockquote>
+<p><a href="https://mp.weixin.qq.com/s/8qemhRg5MgXs1So5YCv0fQ">关于最左匹配原则，全网都在说的一个错误结论</a></p>
+</blockquote>
+<h3 id="索引下推"><a href="#索引下推" class="headerlink" title="索引下推"></a>索引下推</h3><p>索引下推是MySQL 5.6版本中提供的一种索引优化功能。</p>
+<p>在5.6版本之前遍历非聚簇索引时，需要读取一个主键ID，然后回表查看是否满足查询要求，然后在读取一个主键ID，在回表查看，一直不满足要求为止。5.6版本之后，会先对索引中包含的字段进行判断，如果不满足，就无需回表了，直接下一个值继续判断，这种做法可以过滤掉一些不符合条件的记录，降低回表次数。</p>
+<h2 id="正确使用索引的建议"><a href="#正确使用索引的建议" class="headerlink" title="正确使用索引的建议"></a>正确使用索引的建议</h2><p><strong>需要建立索引的情况</strong></p>
+<ul>
+<li>频繁查询的字段</li>
+<li>经常作为where条件的字段</li>
+<li>频繁需要排序的字段</li>
+</ul>
+<p><strong>无需建立索引的情况</strong></p>
+<ul>
+<li>频繁被更新的字段</li>
+</ul>
+<p><strong>索引失效的几种情况</strong></p>
+<ul>
+<li>未遵循最左匹配原则</li>
+<li>在索引字段上使用函数计算（对索引字段做函数处理，有可能会破坏索引的有序性，哪怕函数不会破坏有序性，也不走了，这里仅仅是放弃了索引的搜索功能，但并不意味着要走全表扫描，优化器会评估全表扫描和全索引扫描，哪个好走哪个）</li>
+<li>隐式类型转换（其实本质也是在索引字段上使用了函数操作，索引字段上不能进行函数操作，但是索引的参数值上可以进行函数操作）</li>
+<li>以%开头的模糊匹配： like  “%abc”</li>
+<li>OR 语句的前后有一个查询字段没有索引时，本次查询不会走索引</li>
+</ul>
+<p><strong>常用建议</strong></p>
+<ul>
+<li>一张表上的索引不是越多越好，索引的创建和维护需要代价的，在插入和删除时需要修改索引，太多的索引可能会导致查询性能降低（优化器会根据可选索引计算执行计划，用来选择一个最优的索引，过多的索引会增加优化器的分析时间，进而影响查询性能）</li>
+<li>尽可能的考虑联合索引，而不是单列索引</li>
+<li>避免冗余索引，联合索引（a，b）和索引（a）中索引a就是冗余索引</li>
+<li>字符串类型中可以使用前缀索引来建立索引，降低存储消耗</li>
+</ul>
+]]></content>
+      <categories>
+        <category>MySQL系列</category>
+      </categories>
+      <tags>
+        <tag>MySQL索引</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>设计模式之-原型模式</title>
     <url>/2022/04/08/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B-%E5%8E%9F%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
     <content><![CDATA[<blockquote>
